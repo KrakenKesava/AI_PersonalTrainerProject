@@ -25,114 +25,152 @@ class SourceSelector(TkinterDnD.Tk):
     def __init__(self):
         super().__init__()
 
-        self.title("AI Camera Launcher")
-        self.geometry("500x520")
+        self.title("AI Trainer - Input Source")
+        self.geometry("1280x720")
         self.resizable(False, False)
 
-        self.configure(bg="#1a1a1a")
+        self.configure(bg="#0f172a")
 
         self.build_ui()
 
+    # =========================
+    # UI BUILD
+    # =========================
     def build_ui(self):
 
-        title = ctk.CTkLabel(
-            self,
-            text="🎥 Select Input Source",
-            font=ctk.CTkFont(size=22, weight="bold")
-        )
-        title.pack(pady=20)
+        # HEADER
+        header = ctk.CTkFrame(self, height=80)
+        header.pack(fill="x")
 
-        subtitle = ctk.CTkLabel(
-            self,
-            text="Choose a camera or video file to begin",
+        ctk.CTkLabel(
+            header,
+            text="🤖 AI Fitness Trainer",
+            font=ctk.CTkFont(size=26, weight="bold")
+        ).pack(pady=(20, 5))
+
+        ctk.CTkLabel(
+            header,
+            text="Select your input source to begin analysis",
             font=ctk.CTkFont(size=14),
             text_color="gray"
-        )
-        subtitle.pack(pady=5)
+        ).pack()
 
-        self.camera_frame = ctk.CTkFrame(self, corner_radius=15)
-        self.camera_frame.pack(pady=20, padx=20, fill="both")
+        # MAIN LAYOUT
+        main_frame = ctk.CTkFrame(self)
+        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+
+        left_frame = ctk.CTkFrame(main_frame)
+        left_frame.pack(side="left", fill="both", expand=True, padx=10)
+
+        right_frame = ctk.CTkFrame(main_frame)
+        right_frame.pack(side="right", fill="both", expand=True, padx=10)
+
+        # =========================
+        # LEFT → CAMERAS
+        # =========================
+        ctk.CTkLabel(
+            left_frame,
+            text="📷 Available Cameras",
+            font=ctk.CTkFont(size=18, weight="bold")
+        ).pack(pady=15)
+
+        self.camera_frame = ctk.CTkScrollableFrame(left_frame)
+        self.camera_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
         self.load_cameras()
-        video_btn = ctk.CTkButton(
-            self,
-            text="📁 Select Video File",
+
+        # =========================
+        # RIGHT → FILE INPUT
+        # =========================
+        ctk.CTkLabel(
+            right_frame,
+            text="📁 Upload Media",
+            font=ctk.CTkFont(size=18, weight="bold")
+        ).pack(pady=15)
+
+        ctk.CTkButton(
+            right_frame,
+            text="Select Video / Image",
             height=45,
             corner_radius=12,
             command=self.choose_video
-        )
-        video_btn.pack(pady=(15, 5))
+        ).pack(pady=10)
 
-        format_label = ctk.CTkLabel(
-            self,
-            text=f"Supported formats: {FORMAT_TEXT}",
+        ctk.CTkLabel(
+            right_frame,
+            text=f"Formats: {FORMAT_TEXT}",
             font=ctk.CTkFont(size=12),
             text_color="gray"
-        )
-        format_label.pack(pady=(0, 10))
+        ).pack(pady=5)
 
+        # Drag & Drop
         self.drop_area = ctk.CTkFrame(
-            self,
-            height=100,
-            corner_radius=15
+            right_frame,
+            height=200,
+            corner_radius=15,
+            fg_color="#111827"
         )
-        self.drop_area.pack(padx=30, fill="x")
+        self.drop_area.pack(padx=20, pady=20, fill="x")
 
-        drop_label = ctk.CTkLabel(
+        ctk.CTkLabel(
             self.drop_area,
-            text="🖱 Drag & Drop Video Here",
-            font=ctk.CTkFont(size=14)
-        )
-        drop_label.pack(expand=True)
+            text="⬇ Drag & Drop File Here",
+            font=ctk.CTkFont(size=15)
+        ).pack(expand=True)
 
         self.drop_area.drop_target_register(DND_FILES)
         self.drop_area.dnd_bind("<<Drop>>", self.drop_video)
 
-        exit_btn = ctk.CTkButton(
-            self,
-            text="Exit",
-            fg_color="#aa2e2e",
-            hover_color="#cc3b3b",
-            corner_radius=12,
-            command=self.destroy
-        )
-        exit_btn.pack(pady=20)
+        # FOOTER
+        footer = ctk.CTkFrame(self, height=60)
+        footer.pack(fill="x")
 
+        ctk.CTkButton(
+            footer,
+            text="Exit",
+            fg_color="#dc2626",
+            hover_color="#ef4444",
+            corner_radius=10,
+            width=120,
+            command=self.destroy
+        ).pack(pady=10)
+
+    # =========================
+    # LOAD CAMERAS
+    # =========================
     def load_cameras(self):
 
         indexes = cameraModule.list_cameras()
         names = cameraModule.get_camera_names()
 
         if not indexes:
-            no_cam = ctk.CTkLabel(
+            ctk.CTkLabel(
                 self.camera_frame,
                 text="No Cameras Detected",
                 text_color="red"
-            )
-            no_cam.pack(pady=10)
+            ).pack(pady=10)
             return
 
         for idx in indexes:
-            cam_name = (
-                names[idx] if names and idx < len(names)
-                else f"Camera {idx}"
-            )
+            cam_name = cameraModule.get_camera_name(idx, names)
 
-            btn = ctk.CTkButton(
+            ctk.CTkButton(
                 self.camera_frame,
-                text=f"{idx} • {cam_name}",
+                text=f"📷 {idx} • {cam_name}",
                 height=40,
-                corner_radius=12,
+                corner_radius=10,
                 command=lambda i=idx, n=cam_name: self.start_camera(i, n)
-            )
-            btn.pack(pady=6, padx=10, fill="x")
+            ).pack(pady=5, padx=10, fill="x")
 
+    # =========================
+    # START CAMERA
+    # =========================
     def start_camera(self, index, name):
         global selected_cap, selected_name
 
-        cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
+        cap = cameraModule.open_camera(index)
 
-        if not cap.isOpened():
+        if cap is None:
             messagebox.showerror("Error", "Unable to open camera.")
             return
 
@@ -140,6 +178,9 @@ class SourceSelector(TkinterDnD.Tk):
         selected_name = name
         self.destroy()
 
+    # =========================
+    # FILE SELECT
+    # =========================
     def choose_video(self):
         global selected_cap, selected_name
 
@@ -153,40 +194,24 @@ class SourceSelector(TkinterDnD.Tk):
         if not file_path:
             return
 
-        ext = file_path.split(".")[-1].lower()
+        self.process_file(file_path)
 
-        # If image → load as static frame
-        if ext in SUPPORTED_IMAGE_FORMATS:
-            img = cv2.imread(file_path)
-
-            if img is None:
-                messagebox.showerror("Error", "Unable to open image.")
-                return
-
-            selected_cap = img  # store image directly
-            selected_name = os.path.basename(file_path)
-            self.destroy()
-            return
-
-        # If video → open normally
-        cap = cv2.VideoCapture(file_path)
-
-        if not cap.isOpened():
-            messagebox.showerror("Error", "Unable to open video.")
-            return
-
-        selected_cap = cap
-        selected_name = os.path.basename(file_path)
-        self.destroy()
-
+    # =========================
+    # DRAG & DROP
+    # =========================
     def drop_video(self, event):
+        file_path = event.data.strip("{}")
+        self.process_file(file_path)
+
+    # =========================
+    # FILE PROCESSING
+    # =========================
+    def process_file(self, file_path):
         global selected_cap, selected_name
 
-        import os
-
-        file_path = event.data.strip("{}")
         ext = file_path.split(".")[-1].lower()
 
+        # IMAGE
         if ext in SUPPORTED_IMAGE_FORMATS:
             img = cv2.imread(file_path)
 
@@ -199,6 +224,7 @@ class SourceSelector(TkinterDnD.Tk):
             self.destroy()
             return
 
+        # VIDEO
         cap = cv2.VideoCapture(file_path)
 
         if not cap.isOpened():
@@ -209,7 +235,17 @@ class SourceSelector(TkinterDnD.Tk):
         selected_name = os.path.basename(file_path)
         self.destroy()
 
+
+# =========================
+# LAUNCH FUNCTION
+# =========================
 def launch_gui():
+    global selected_cap, selected_name
+
+    selected_cap = None
+    selected_name = None
+
     app = SourceSelector()
     app.mainloop()
+
     return selected_cap, selected_name
