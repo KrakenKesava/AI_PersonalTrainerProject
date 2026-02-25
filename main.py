@@ -4,100 +4,112 @@ import time
 import sourceSelectorGUI as gui
 import PoseModule as pm
 import RepCounterModule as rep
-import ExercisesAnalyser as ea
 
 # ==============================
 # INIT
 # ==============================
-source, cam_name = gui.launch_gui()
-detector = pm.poseDetector()
-reps = rep.Reps_Counter()
 
-min_angle = 180
-max_angle = 0
-last_feedback = "Start your workout 💪"
+source, cam_name, exercise_name = gui.launch_gui()
 
 if source is None:
     print("No source selected")
     exit()
 
 print(f"Started Source: {cam_name}")
+print(f"Selected Exercise: {exercise_name}")
 
+detector = pm.poseDetector()
+reps = rep.RepCounter()
+
+# ==============================
+# Exercise Selection
+# ==============================
+
+if exercise_name == "pullup":
+    from exercises.pullup import PullupAnalyser
+    analyser = PullupAnalyser()
+    angle_points = (11, 13, 15)  # shoulder, elbow, wrist
+
+# elif exercise_name == "pushup":
+#     from exercises.pushup import PushupAnalyser
+#     analyser = PushupAnalyser()
+#     angle_points = (11, 13, 15)
+#
+# elif exercise_name == "squat":
+#     from exercises.squat import SquatAnalyser
+#     analyser = SquatAnalyser()
+#     angle_points = (23, 25, 27)  # hip, knee, ankle
+
+else:
+    raise ValueError("Unsupported exercise selected")
+
+last_feedback = "Start your workout"
 pTime = 0
+
 
 # ==============================
 # PROCESS FRAME
 # ==============================
+
 def process_frame(img):
-    global min_angle, max_angle, last_feedback
+    global last_feedback
 
     img = detector.findPose(img)
     lmList = detector.findPosition(img, False)
 
-    leftArmAngle = 0
-    leftArmPer = 0
     reps_count = reps.rep_count
+    percentage = 0
 
     if len(lmList) != 0:
-        leftArmAngle = detector.findAngle(img, 11, 13, 15, True)
 
-        # Track motion
-        min_angle = min(min_angle, leftArmAngle)
-        max_angle = max(max_angle, leftArmAngle)
+        angle = detector.findAngle(
+            img,
+            angle_points[0],
+            angle_points[1],
+            angle_points[2],
+            True
+        )
 
-        leftArmPer = np.interp(leftArmAngle, (50, 160), (100, 0))
-        leftArmPer = np.clip(leftArmPer, 0, 100)
+        analyser.update(angle)
 
-        reps_count, direction, rep_done = reps.update(leftArmPer)
+        # UI percentage (for progress bar only)
+        percentage = np.interp(angle, (50, 160), (100, 0))
+        percentage = np.clip(percentage, 0, 100)
 
-        # =========================
-        # LIVE FEEDBACK
-        # =========================
-        if leftArmPer < 30:
-            live_feedback = "Pull up"
-        elif leftArmPer > 80:
-            live_feedback = "Almost there"
-        else:
-            live_feedback = "Good motion"
+        # 🔥 IMPORTANT: Rep logic must use ANGLE
+        reps_count, rep_done = reps.update(angle)
 
         if not rep_done:
-            last_feedback = live_feedback
+            if hasattr(analyser, "get_live_feedback"):
+                last_feedback = analyser.get_live_feedback(angle)
+            else:
+                last_feedback = "Analyzing..."
 
-        # =========================
-        # REP FEEDBACK
-        # =========================
         if rep_done:
-            result_top = ea.analyse_pullup(min_angle, 0)
-            result_bottom = ea.analyse_pullup(max_angle, 1)
+            result = analyser.analyse_rep()
+            last_feedback = " | ".join(result["feedback"])
+            print("REP RESULT:", result)
 
-            feedback_list = result_top["feedback"] + result_bottom["feedback"]
-            last_feedback = " | ".join(feedback_list)
-
-            print("REP RESULT:", feedback_list)
-
-            min_angle = 180
-            max_angle = 0
-
-    return img, reps_count, leftArmPer, last_feedback
+    return img, reps_count, percentage, last_feedback
 
 
 # ==============================
 # IMAGE MODE
 # ==============================
+
 if isinstance(source, np.ndarray):
 
     img, _, _, _ = process_frame(source.copy())
 
     while True:
         cv2.imshow(f"AI Input - {cam_name}", img)
-
         if cv2.waitKey(1) & 0xFF == 27:
             break
-
 
 # ==============================
 # VIDEO / CAMERA MODE
 # ==============================
+
 else:
     cap = source
 
@@ -117,9 +129,6 @@ else:
         fps = 1 / (cTime - pTime) if pTime != 0 else 0
         pTime = cTime
 
-        # ===============================
-        # TOP LEFT STATS
-        # ===============================
         cv2.putText(img, f"FPS: {int(fps)}",
                     (20, 40),
                     cv2.FONT_HERSHEY_SIMPLEX,
@@ -171,10 +180,8 @@ else:
         x = bar_x1
         y = bar_y2 + 40
 
-        display_feedback = feedback if feedback else "Analyzing..."
-        lines = display_feedback.split("|")
+        lines = feedback.split("|")
 
-        # prevent overflow
         if y + (len(lines) * 40) > img.shape[0]:
             y = img.shape[0] - (len(lines) * 40) - 10
 
@@ -188,14 +195,12 @@ else:
                 2
             )
 
-            # background
             cv2.rectangle(img,
                           (x - 10, y - text_h - 12 + i*40),
                           (x + text_w + 10, y + 8 + i*40),
                           (20, 20, 20),
                           cv2.FILLED)
 
-            # color logic
             if "Good" in line or "correct" in line.lower():
                 color = (0, 255, 0)
             elif "Pull" in line or "Extend" in line:
@@ -203,7 +208,6 @@ else:
             else:
                 color = (0, 255, 255)
 
-            # text
             cv2.putText(img,
                         line,
                         (x, y + i*40),

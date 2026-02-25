@@ -12,6 +12,7 @@ ctk.set_default_color_theme("blue")
 
 selected_cap = None
 selected_name = None
+selected_exercise = None
 
 SUPPORTED_VIDEO_FORMATS = ["mp4", "avi", "mov", "mkv"]
 SUPPORTED_IMAGE_FORMATS = ["jpg", "jpeg", "png", "bmp", "webp"]
@@ -55,7 +56,32 @@ class SourceSelector(TkinterDnD.Tk):
             text_color="gray"
         ).pack()
 
+        # =========================
+        # EXERCISE SELECTION
+        # =========================
+        exercise_frame = ctk.CTkFrame(self)
+        exercise_frame.pack(fill="x", padx=20, pady=(10, 0))
+
+        ctk.CTkLabel(
+            exercise_frame,
+            text="🏋 Select Exercise",
+            font=ctk.CTkFont(size=16, weight="bold")
+        ).pack(side="left", padx=10)
+
+        self.exercise_var = ctk.StringVar(value="pullup")
+
+        self.exercise_menu = ctk.CTkOptionMenu(
+            exercise_frame,
+            values=["pullup"],
+            # values=["pullup", "pushup", "squat"],
+            variable=self.exercise_var,
+            width=150
+        )
+        self.exercise_menu.pack(side="left", padx=10)
+
+        # =========================
         # MAIN LAYOUT
+        # =========================
         main_frame = ctk.CTkFrame(self)
         main_frame.pack(fill="both", expand=True, padx=20, pady=20)
 
@@ -93,7 +119,7 @@ class SourceSelector(TkinterDnD.Tk):
             text="Select Video / Image",
             height=45,
             corner_radius=12,
-            command=self.choose_video
+            command=self.choose_file
         ).pack(pady=10)
 
         ctk.CTkLabel(
@@ -119,7 +145,7 @@ class SourceSelector(TkinterDnD.Tk):
         ).pack(expand=True)
 
         self.drop_area.drop_target_register(DND_FILES)
-        self.drop_area.dnd_bind("<<Drop>>", self.drop_video)
+        self.drop_area.dnd_bind("<<Drop>>", self.drop_file)
 
         # FOOTER
         footer = ctk.CTkFrame(self, height=60)
@@ -166,7 +192,7 @@ class SourceSelector(TkinterDnD.Tk):
     # START CAMERA
     # =========================
     def start_camera(self, index, name):
-        global selected_cap, selected_name
+        global selected_cap, selected_name, selected_exercise
 
         cap = cameraModule.open_camera(index)
 
@@ -176,14 +202,14 @@ class SourceSelector(TkinterDnD.Tk):
 
         selected_cap = cap
         selected_name = name
+        selected_exercise = self.exercise_var.get()
+
         self.destroy()
 
     # =========================
     # FILE SELECT
     # =========================
-    def choose_video(self):
-        global selected_cap, selected_name
-
+    def choose_file(self):
         file_path = filedialog.askopenfilename(
             filetypes=[(
                 "Media Files",
@@ -199,7 +225,7 @@ class SourceSelector(TkinterDnD.Tk):
     # =========================
     # DRAG & DROP
     # =========================
-    def drop_video(self, event):
+    def drop_file(self, event):
         file_path = event.data.strip("{}")
         self.process_file(file_path)
 
@@ -207,7 +233,7 @@ class SourceSelector(TkinterDnD.Tk):
     # FILE PROCESSING
     # =========================
     def process_file(self, file_path):
-        global selected_cap, selected_name
+        global selected_cap, selected_name, selected_exercise
 
         ext = file_path.split(".")[-1].lower()
 
@@ -221,6 +247,7 @@ class SourceSelector(TkinterDnD.Tk):
 
             selected_cap = img
             selected_name = os.path.basename(file_path)
+            selected_exercise = self.exercise_var.get()
             self.destroy()
             return
 
@@ -233,6 +260,7 @@ class SourceSelector(TkinterDnD.Tk):
 
         selected_cap = cap
         selected_name = os.path.basename(file_path)
+        selected_exercise = self.exercise_var.get()
         self.destroy()
 
 
@@ -240,12 +268,13 @@ class SourceSelector(TkinterDnD.Tk):
 # LAUNCH FUNCTION
 # =========================
 def launch_gui():
-    global selected_cap, selected_name
+    global selected_cap, selected_name, selected_exercise
 
     selected_cap = None
     selected_name = None
+    selected_exercise = None
 
     app = SourceSelector()
     app.mainloop()
 
-    return selected_cap, selected_name
+    return selected_cap, selected_name, selected_exercise
