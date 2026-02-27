@@ -16,10 +16,13 @@ import cameraModule
 import PoseModule as pm
 import RepCounterModule as rep
 
-ctk.set_appearance_mode("dark")
-ctk.set_default_color_theme("blue")
-
-
+# Futuristic Color Palette
+BG_COLOR = "#020617"
+ACCENT_COLOR = "#22d3ee"
+SECONDARY_ACCENT = "#818cf8"
+SIDEBAR_COLOR = "#0f172a"
+CARD_BG = "#1e293b"
+TEXT_COLOR = "#f8fafc"
 
 SUPPORTED_VIDEO_FORMATS = ["mp4", "avi", "mov", "mkv"]
 SUPPORTED_IMAGE_FORMATS = ["jpg", "jpeg", "png", "bmp", "webp"]
@@ -33,9 +36,9 @@ class MainApp(TkinterDnD.Tk):
     def __init__(self):
         super().__init__()
 
-        self.title("AI Fitness Trainer")
-        self.geometry("1400x800")
-        self.configure(bg="#0f172a")
+        self.title("AI Fitness Trainer Pro")
+        self.geometry("1400x850")
+        self.configure(bg=BG_COLOR)
 
         # Application State
         self.selected_exercise = "pullup"  # Default
@@ -66,40 +69,48 @@ class MainApp(TkinterDnD.Tk):
 
     def build_layout(self):
         # MAIN CONTAINER
-        self.main_container = ctk.CTkFrame(self, fg_color="#0f172a", corner_radius=0)
+        self.main_container = ctk.CTkFrame(self, fg_color=BG_COLOR, corner_radius=0)
         self.main_container.pack(fill="both", expand=True)
 
         # SIDEBAR
-        self.sidebar = ctk.CTkFrame(self.main_container, width=280, corner_radius=0, fg_color="#1e293b")
+        self.sidebar = ctk.CTkFrame(self.main_container, width=280, corner_radius=0, fg_color=SIDEBAR_COLOR, border_width=2, border_color="#1e293b")
         self.sidebar.pack(side="left", fill="y")
         self.sidebar.pack_propagate(False)
 
-        # Sidebar Title
+        # Sidebar Title with Glow Effect
+        title_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
+        title_frame.pack(pady=(40, 40), padx=20, fill="x")
+
         ctk.CTkLabel(
-            self.sidebar,
-            text="AI PERSONAL TRAINER",
-            font=ctk.CTkFont(size=20, weight="bold"),
-            text_color="#38bdf8"
-        ).pack(pady=(40, 20), padx=20)
+            title_frame,
+            text="AI TRAINER PRO",
+            font=ctk.CTkFont(size=24, weight="bold", family="Orbitron"),
+            text_color=ACCENT_COLOR
+        ).pack()
+        
+        # Decorative line
+        ctk.CTkFrame(title_frame, height=2, fg_color=ACCENT_COLOR, width=150).pack(pady=5)
 
         # Sidebar Buttons
-        self.btn_trainer = self.create_sidebar_button("🏋 AI Personal Trainer", self.show_exercise_selection, active=True)
-        self.btn_questions = self.create_sidebar_button("❓ Ask Questions", self.show_chat_interface)
+        self.btn_trainer = self.create_sidebar_button("🏋 WORKOUT HUB", self.show_exercise_selection, active=True)
+        self.btn_questions = self.create_sidebar_button("❓ AI ASSISTANT", self.show_chat_interface)
 
         # Sidebar Footer
         footer = ctk.CTkFrame(self.sidebar, fg_color="transparent")
-        footer.pack(side="bottom", fill="x", pady=20)
+        footer.pack(side="bottom", fill="x", pady=30)
         
         ctk.CTkButton(
             footer,
-            text="Exit Application",
+            text="TERMINATE SESSION",
             fg_color="#ef4444",
-            hover_color="#dc2626",
+            hover_color="#991b1b",
+            font=ctk.CTkFont(size=12, weight="bold"),
+            height=40,
             command=self.quit
         ).pack(padx=20, fill="x")
 
         # CONTENT AREA
-        self.content_area = ctk.CTkFrame(self.main_container, fg_color="#0f172a", corner_radius=0)
+        self.content_area = ctk.CTkFrame(self.main_container, fg_color=BG_COLOR, corner_radius=0)
         self.content_area.pack(side="right", fill="both", expand=True, padx=40, pady=40)
 
     def create_sidebar_button(self, text, command, active=False):
@@ -108,12 +119,16 @@ class MainApp(TkinterDnD.Tk):
             text=text,
             command=command,
             anchor="w",
-            height=50,
-            fg_color="#334155" if active else "transparent",
-            hover_color="#334155",
-            font=ctk.CTkFont(size=15)
+            height=55,
+            fg_color=ACCENT_COLOR if active else "transparent",
+            text_color="white" if active else "#94a3b8",
+            hover_color="#1e293b",
+            font=ctk.CTkFont(size=14, weight="bold" if active else "normal"),
+            corner_radius=10,
+            border_width=1 if active else 0,
+            border_color=ACCENT_COLOR if active else SIDEBAR_COLOR
         )
-        btn.pack(fill="x", padx=15, pady=5)
+        btn.pack(fill="x", padx=20, pady=8)
         return btn
 
     def clear_content(self):
@@ -144,37 +159,78 @@ class MainApp(TkinterDnD.Tk):
         grid_frame.grid_rowconfigure((0, 1), weight=1, pad=20)
 
         exercises = [
-            ("Pushup", "Place hands shoulder-width apart..."),
-            ("Pullup", "Grab the bar and pull yourself up..."),
-            ("Situp", "Lie on your back with knees bent..."),
-            ("Squat", "Lower your hips from a standing position...")
+            ("Pushups", "Place hands shoulder-width apart...", "exerciseVideos/Pushups/pushup.png"),
+            ("Pullups", "Grab the bar and pull yourself up...", "exerciseVideos/Pullups/pullup.png"),
+            ("Squads", "Lower your hips from a standing position...", "exerciseVideos/Squads/Squads.png"),
+            ("Situps", "Lie on your back with knees bent...", None) # Placeholder if no image
         ]
 
-        for i, (name, desc) in enumerate(exercises):
+        for i, (name, desc, img_path) in enumerate(exercises):
             row, col = divmod(i, 2)
-            self.create_exercise_card(grid_frame, name, desc, row, col)
+            self.create_exercise_card(grid_frame, name, desc, img_path, row, col)
 
-    def create_exercise_card(self, parent, name, desc, row, col):
-        card = ctk.CTkFrame(parent, fg_color="#1e293b", corner_radius=20, cursor="hand2")
-        card.grid(row=row, column=col, sticky="nsew", padx=15, pady=15)
+    def create_exercise_card(self, parent, name, desc, img_path, row, col):
+        # Base container for card with a neon border effect
+        card_container = ctk.CTkFrame(parent, fg_color="transparent")
+        card_container.grid(row=row, column=col, sticky="nsew", padx=20, pady=20)
         
-        # Make card clickable
-        card.bind("<Button-1>", lambda e, n=name.lower(): self.show_source_selection(n))
+        card = ctk.CTkFrame(
+            card_container, 
+            fg_color=CARD_BG, 
+            corner_radius=20, 
+            cursor="hand2",
+            border_width=1,
+            border_color="#334155"
+        )
+        card.pack(fill="both", expand=True)
+        
+        # Load Image if exists
+        logo_label = None
+        if img_path and os.path.exists(img_path):
+            try:
+                img = Image.open(img_path)
+                ctk_img = ctk.CTkImage(light_image=img, dark_image=img, size=(120, 120))
+                logo_label = ctk.CTkLabel(card, image=ctk_img, text="")
+                logo_label.pack(pady=(20, 10))
+            except Exception as e:
+                print(f"Error loading logo {img_path}: {e}")
+        
+        if not logo_label:
+            ctk.CTkLabel(card, text="🏋️", font=ctk.CTkFont(size=60)).pack(pady=(20, 10))
 
         ctk.CTkLabel(
             card,
-            text=name,
-            font=ctk.CTkFont(size=24, weight="bold"),
-            text_color="#38bdf8"
-        ).pack(pady=(30, 10))
+            text=name.upper(),
+            font=ctk.CTkFont(size=22, weight="bold", family="Orbitron"),
+            text_color=ACCENT_COLOR
+        ).pack(pady=(10, 5))
 
         ctk.CTkLabel(
             card,
             text=desc,
             font=ctk.CTkFont(size=14),
-            text_color="gray",
-            wraplength=250
+            text_color="#94a3b8",
+            wraplength=280
         ).pack(pady=10, padx=20)
+
+        # Interaction effects
+        def on_enter(e):
+            card.configure(border_color=ACCENT_COLOR, border_width=2)
+            card.configure(fg_color="#1e293b") # Slightly lighter
+            
+        def on_leave(e):
+            card.configure(border_color="#334155", border_width=1)
+            card.configure(fg_color=CARD_BG)
+
+        card.bind("<Enter>", on_enter)
+        card.bind("<Leave>", on_leave)
+        card.bind("<Button-1>", lambda e, n=name.lower(): self.show_source_selection(n))
+        
+        # Ensure children also trigger the click
+        for child in card.winfo_children():
+            child.bind("<Enter>", on_enter)
+            child.bind("<Leave>", on_leave)
+            child.bind("<Button-1>", lambda e, n=name.lower(): self.show_source_selection(n))
 
     # ==========================================
     # CHAT INTERFACE: ASK QUESTIONS
@@ -184,21 +240,21 @@ class MainApp(TkinterDnD.Tk):
         self.is_running = False # Stop workout if running
         
         # Update Sidebar Highlighting
-        self.btn_trainer.configure(fg_color="transparent")
-        self.btn_questions.configure(fg_color="#334155")
+        self.btn_trainer.configure(fg_color="transparent", text_color="#94a3b8", border_width=0)
+        self.btn_questions.configure(fg_color=ACCENT_COLOR, text_color="white", border_width=1, border_color=ACCENT_COLOR)
 
         header_frame = ctk.CTkFrame(self.content_area, fg_color="transparent")
         header_frame.pack(fill="x", pady=(0, 20))
 
         ctk.CTkLabel(
             header_frame,
-            text="Ask Your AI Trainer",
-            font=ctk.CTkFont(size=32, weight="bold"),
-            text_color="white"
+            text="AI ASSISTANT",
+            font=ctk.CTkFont(size=32, weight="bold", family="Orbitron"),
+            text_color=ACCENT_COLOR
         ).pack(anchor="w")
 
         # Chat Container
-        self.chat_container = ctk.CTkFrame(self.content_area, fg_color="#1e293b", corner_radius=20)
+        self.chat_container = ctk.CTkFrame(self.content_area, fg_color=SIDEBAR_COLOR, corner_radius=20, border_width=1, border_color="#334155")
         self.chat_container.pack(fill="both", expand=True)
 
         # Chat History
@@ -206,29 +262,32 @@ class MainApp(TkinterDnD.Tk):
         self.chat_history.pack(fill="both", expand=True, padx=20, pady=20)
 
         # Input Area
-        input_frame = ctk.CTkFrame(self.chat_container, fg_color="#0f172a", height=80, corner_radius=0)
-        input_frame.pack(fill="x", side="bottom")
+        input_frame = ctk.CTkFrame(self.chat_container, fg_color=BG_COLOR, height=80, corner_radius=15)
+        input_frame.pack(fill="x", side="bottom", padx=10, pady=10)
 
         self.msg_entry = ctk.CTkEntry(
             input_frame,
-            placeholder_text="Type your question here...",
+            placeholder_text="Enter command or question...",
             height=50,
-            fg_color="#1e293b",
-            border_width=0,
+            fg_color=SIDEBAR_COLOR,
+            border_width=1,
+            border_color="#334155",
             font=ctk.CTkFont(size=14)
         )
-        self.msg_entry.pack(side="left", fill="x", expand=True, padx=(20, 10), pady=15)
+        self.msg_entry.pack(side="left", fill="x", expand=True, padx=(15, 10), pady=10)
         self.msg_entry.bind("<Return>", lambda e: self.send_chat_message())
 
         ctk.CTkButton(
             input_frame,
-            text="Send",
+            text="SEND",
             width=100,
             height=50,
             command=self.send_chat_message,
-            fg_color="#38bdf8",
-            hover_color="#0284c7"
-        ).pack(side="right", padx=(10, 20), pady=15)
+            fg_color=ACCENT_COLOR,
+            text_color="black",
+            hover_color=SECONDARY_ACCENT,
+            font=ctk.CTkFont(size=14, weight="bold")
+        ).pack(side="right", padx=(10, 15), pady=10)
 
         # Initial Welcome Message
         self.add_chat_bubble("AI Trainer", "Hello! I'm your AI Personal Trainer. How can I help you today?", is_user=False)
@@ -243,15 +302,29 @@ class MainApp(TkinterDnD.Tk):
         if not files:
             return "No previous sessions recorded."
         
-        # Sort by date (filename has timestamp)
         files.sort(reverse=True)
-        summary = "User's Recent Workout History:\n"
+        summary = "User's Recent Workout History (Context for AI):\n"
         
         for f in files[:3]: # Take last 3 sessions
             try:
                 with open(os.path.join(session_dir, f), 'r') as file:
                     data = json.load(file)
-                    summary += f"- {data.get('date')}: {data.get('exercise')} session, {data.get('total_reps')} reps.\n"
+                    reps = data.get('reps', [])
+                    total_reps = len(reps)
+                    failed_reps = [r for r in reps if not r.get('success', True)]
+                    
+                    # Collect unique feedback from failed reps
+                    all_feedback = []
+                    for r in failed_reps:
+                        all_feedback.extend(r.get('feedback', []))
+                    unique_feedback = list(set(all_feedback))
+                    
+                    summary += f"- {data.get('date')}: {data.get('exercise')} ({total_reps} total)."
+                    if failed_reps:
+                        summary += f" ISSUES: {', '.join(unique_feedback)}. "
+                        summary += f"Success rate: {int((total_reps - len(failed_reps))/total_reps * 100)}%.\n"
+                    else:
+                        summary += " Perfect form achieved!\n"
             except:
                 continue
         return summary
@@ -278,16 +351,19 @@ class MainApp(TkinterDnD.Tk):
             try:
                 context = self.get_session_summary()
                 system_prompt = f"""
-                You are a professional AI Personal Trainer. 
+                You are a professional AI Personal Trainer Pro. 
                 Your goal is to provide technical, motivational, and safe advice about gym exercises.
                 
+                CURRENT USER DATA:
                 {context}
                 
                 Rules:
-                1. If asked about form, be detailed (Pushups, Pullups, Squats, Situps).
-                2. If the user mentions their history, use the context provided.
-                3. Be motivational but focus on safety.
-                4. Keep responses concise (under 100 words).
+                1. If asked about form, be detailed (Pushups, Pullups, Squats).
+                2. If the user mentions their history or "how did I do?", use the context provided above.
+                3. Be motivational but focus on safety. Use terms like "Range of Motion", "Tempo", and "Lockout".
+                4. If the user had "Pull higher" issues, explain that they aren't getting their chin above the bar.
+                5. If they had "Extend fully" issues, explain they aren't dropping low enough to the dead-hang position.
+                6. Keep responses futuristic, helpful, and concise (under 100 words).
                 """
                 
                 full_prompt = f"{system_prompt}\n\nUser Question: {user_msg}"
@@ -309,11 +385,18 @@ class MainApp(TkinterDnD.Tk):
         bubble_frame.pack(fill="x", pady=10)
 
         align = "right" if is_user else "left"
-        bg_color = "#38bdf8" if is_user else "#334155"
-        text_color = "white"
+        bg_color = "#1e293b" if is_user else "transparent"
+        border_color = ACCENT_COLOR if is_user else SECONDARY_ACCENT
+        txt_color = TEXT_COLOR
         
         # Container for the bulb and text
-        inner_bubble = ctk.CTkFrame(bubble_frame, fg_color=bg_color, corner_radius=15)
+        inner_bubble = ctk.CTkFrame(
+            bubble_frame, 
+            fg_color=bg_color, 
+            corner_radius=15,
+            border_width=1,
+            border_color=border_color
+        )
         inner_bubble.pack(side=align, padx=10)
 
         ctk.CTkLabel(
@@ -327,7 +410,7 @@ class MainApp(TkinterDnD.Tk):
             inner_bubble,
             text=text,
             font=ctk.CTkFont(size=14),
-            text_color=text_color,
+            text_color=txt_color,
             wraplength=400,
             justify="left"
         ).pack(anchor="w", padx=15, pady=(0, 10))
@@ -347,18 +430,20 @@ class MainApp(TkinterDnD.Tk):
         header_frame.pack(fill="x", pady=(0, 20))
 
         ctk.CTkButton(
-            header_frame,
-            text="← Back",
-            width=80,
+            header_frame, 
+            text="← BACK", 
+            width=100, 
             command=self.show_exercise_selection,
             fg_color="transparent",
-            hover_color="#1e293b"
+            hover_color=SIDEBAR_COLOR,
+            font=ctk.CTkFont(size=12, weight="bold")
         ).pack(side="left")
 
         ctk.CTkLabel(
             header_frame,
-            text=f"Step 2: Source Selection for {exercise.capitalize()}",
-            font=ctk.CTkFont(size=28, weight="bold"),
+            text=f"SOURCE SELECTION",
+            font=ctk.CTkFont(size=28, weight="bold", family="Orbitron"),
+            text_color=ACCENT_COLOR,
             padx=20
         ).pack(side="left")
 
@@ -366,10 +451,10 @@ class MainApp(TkinterDnD.Tk):
         split_container.pack(fill="both", expand=True, pady=20)
 
         # LEFT - CAMERAS
-        left_side = ctk.CTkFrame(split_container, fg_color="#1e293b", corner_radius=15)
+        left_side = ctk.CTkFrame(split_container, fg_color=SIDEBAR_COLOR, corner_radius=15, border_width=1, border_color="#334155")
         left_side.pack(side="left", fill="both", expand=True, padx=(0, 10))
 
-        ctk.CTkLabel(left_side, text="Available Cameras", font=ctk.CTkFont(size=18, weight="bold")).pack(pady=20)
+        ctk.CTkLabel(left_side, text="AVAILABLE CAMERAS", font=ctk.CTkFont(size=18, weight="bold", family="Orbitron"), text_color=SECONDARY_ACCENT).pack(pady=20)
         
         cam_scroll = ctk.CTkScrollableFrame(left_side, fg_color="transparent")
         cam_scroll.pack(fill="both", expand=True, padx=15, pady=15)
@@ -384,30 +469,38 @@ class MainApp(TkinterDnD.Tk):
                 cam_name = cameraModule.get_camera_name(idx, names)
                 ctk.CTkButton(
                     cam_scroll,
-                    text=f"Camera {idx}: {cam_name}",
+                    text=f"CAM-{idx}: {cam_name}",
                     command=lambda i=idx, n=cam_name: self.start_workout(cameraModule.open_camera(i), n),
-                    height=50,
-                    corner_radius=10
-                ).pack(fill="x", pady=5)
+                    height=55,
+                    corner_radius=10,
+                    fg_color="#1e293b",
+                    hover_color=ACCENT_COLOR,
+                    text_color="white",
+                    font=ctk.CTkFont(size=13, weight="bold")
+                ).pack(fill="x", pady=8)
 
         # RIGHT - FILE UPLOAD
-        right_side = ctk.CTkFrame(split_container, fg_color="#1e293b", corner_radius=15)
+        right_side = ctk.CTkFrame(split_container, fg_color=SIDEBAR_COLOR, corner_radius=15, border_width=1, border_color="#334155")
         right_side.pack(side="right", fill="both", expand=True, padx=(10, 0))
 
-        ctk.CTkLabel(right_side, text="Upload Media", font=ctk.CTkFont(size=18, weight="bold")).pack(pady=20)
+        ctk.CTkLabel(right_side, text="UPLOAD MEDIA", font=ctk.CTkFont(size=18, weight="bold", family="Orbitron"), text_color=SECONDARY_ACCENT).pack(pady=20)
 
         ctk.CTkButton(
             right_side,
-            text="Choose Video/Image",
+            text="BROWSE FILES",
             command=self.choose_file_and_start,
-            height=50
-        ).pack(pady=20)
+            height=55,
+            fg_color=ACCENT_COLOR,
+            text_color="black",
+            hover_color=SECONDARY_ACCENT,
+            font=ctk.CTkFont(size=14, weight="bold")
+        ).pack(pady=20, padx=30, fill="x")
 
         # Drag & Drop Area
-        self.drop_area = ctk.CTkFrame(right_side, height=200, fg_color="#0f172a", corner_radius=15)
+        self.drop_area = ctk.CTkFrame(right_side, height=200, fg_color=BG_COLOR, corner_radius=15, border_width=2, border_color="#334155")
         self.drop_area.pack(fill="x", padx=30, pady=20)
         
-        ctk.CTkLabel(self.drop_area, text="Drag & Drop Here").pack(expand=True)
+        ctk.CTkLabel(self.drop_area, text="DROP MEDIA HERE", font=ctk.CTkFont(size=14, weight="bold"), text_color="#64748b").pack(expand=True)
         self.drop_area.drop_target_register(DND_FILES)
         self.drop_area.dnd_bind("<<Drop>>", self.drop_file_and_start)
 
@@ -444,47 +537,88 @@ class MainApp(TkinterDnD.Tk):
         self.clear_content()
 
         # Init Exercise Analyser
-        if self.selected_exercise == "pullup":
+        if self.selected_exercise == "pullups":
             from exercises.pullup import PullupAnalyser
             self.analyser = PullupAnalyser()
-            self.angle_points = (11, 13, 15)
-        # Add other exercises here...
+            self.angle_points = (11, 13, 15) # Shoulder, Elbow, Wrist
+            self.reps.set_thresholds(100, 115) # Universal attempt detection for Pullups
+        elif self.selected_exercise == "pushups":
+            from exercises.pushup import PushupAnalyser
+            self.analyser = PushupAnalyser()
+            self.angle_points = (11, 13, 15) # Same as pullup essentially
+            self.reps.set_thresholds(110, 140) # Lenient: Capture partial pushups
+        elif self.selected_exercise == "squats":
+            from exercises.squat import SquatAnalyser
+            self.analyser = SquatAnalyser()
+            self.angle_points = (23, 25, 27) # Hip, Knee, Ankle
+            self.reps.set_thresholds(115, 145) # Lenient: Capture shallow squats
         else:
             self.analyser = None
             self.angle_points = (11, 13, 15) # Default
+            self.reps.set_thresholds(60, 150) # Standard default
 
         # UI for Step 3
         header = ctk.CTkFrame(self.content_area, fg_color="transparent")
         header.pack(fill="x", pady=(0, 20))
 
-        ctk.CTkButton(header, text="← Back", width=80, command=self.stop_workout_and_back).pack(side="left")
-        ctk.CTkLabel(header, text=f"Workout Session: {self.selected_exercise.capitalize()}", font=ctk.CTkFont(size=24, weight="bold"), padx=20).pack(side="left")
+        ctk.CTkButton(
+            header, 
+            text="← ABORT SESSION", 
+            width=150, 
+            command=self.stop_workout_and_back,
+            fg_color="transparent",
+            hover_color="#ef4444",
+            border_width=1,
+            border_color="#ef4444",
+            font=ctk.CTkFont(size=12, weight="bold")
+        ).pack(side="left")
+        
+        ctk.CTkLabel(
+            header, 
+            text=f"ACTIVE SESSION: {self.selected_exercise.upper()}", 
+            font=ctk.CTkFont(size=24, weight="bold", family="Orbitron"), 
+            text_color=ACCENT_COLOR,
+            padx=20
+        ).pack(side="left")
 
         # Layout for video and stats
         main_workout_frame = ctk.CTkFrame(self.content_area, fg_color="transparent")
         main_workout_frame.pack(fill="both", expand=True)
 
-        # Video Canvas
-        self.video_label = ctk.CTkLabel(main_workout_frame, text="")
-        self.video_label.pack(side="left", fill="both", expand=True, padx=20)
+        # Video Canvas with Neon border
+        video_container = ctk.CTkFrame(main_workout_frame, fg_color=BG_COLOR, border_width=2, border_color=ACCENT_COLOR, corner_radius=10)
+        video_container.pack(side="left", fill="both", expand=True, padx=(0, 20))
 
-        # Stats Panel
-        stats_panel = ctk.CTkFrame(main_workout_frame, width=300, fg_color="#1e293b", corner_radius=15)
+        self.video_label = ctk.CTkLabel(video_container, text="INITIALIZING SYSTEM...")
+        self.video_label.pack(fill="both", expand=True, padx=2, pady=2)
+
+        # Stats Panel (HUD Style)
+        stats_panel = ctk.CTkFrame(main_workout_frame, width=320, fg_color=SIDEBAR_COLOR, corner_radius=15, border_width=1, border_color="#334155")
         stats_panel.pack(side="right", fill="y")
         stats_panel.pack_propagate(False)
 
-        ctk.CTkLabel(stats_panel, text="STATISTICS", font=ctk.CTkFont(size=18, weight="bold"), text_color="#38bdf8").pack(pady=20)
+        ctk.CTkLabel(stats_panel, text="HUD - TELEMETRY", font=ctk.CTkFont(size=18, weight="bold", family="Orbitron"), text_color=SECONDARY_ACCENT).pack(pady=20)
         
-        self.rep_label = ctk.CTkLabel(stats_panel, text="Reps: 0", font=ctk.CTkFont(size=32, weight="bold"))
-        self.rep_label.pack(pady=10)
+        # Rep Counter Card
+        rep_card = ctk.CTkFrame(stats_panel, fg_color=BG_COLOR, corner_radius=10, border_width=1, border_color=ACCENT_COLOR)
+        rep_card.pack(fill="x", padx=15, pady=10)
+        
+        ctk.CTkLabel(rep_card, text="TOTAL REPS", font=ctk.CTkFont(size=12, weight="bold"), text_color="#64748b").pack(pady=(10, 0))
+        self.rep_label = ctk.CTkLabel(rep_card, text="0", font=ctk.CTkFont(size=48, weight="bold", family="Orbitron"), text_color=ACCENT_COLOR)
+        self.rep_label.pack(pady=(0, 10))
 
-        self.feedback_label = ctk.CTkLabel(stats_panel, text="Analyzing...", font=ctk.CTkFont(size=14), wraplength=250, text_color="yellow")
-        self.feedback_label.pack(pady=10, padx=20)
+        # Feedback Card
+        feedback_card = ctk.CTkFrame(stats_panel, fg_color=BG_COLOR, corner_radius=10, border_width=1, border_color=SECONDARY_ACCENT)
+        feedback_card.pack(fill="x", padx=15, pady=10)
+        
+        ctk.CTkLabel(feedback_card, text="LIVE ANALYSIS", font=ctk.CTkFont(size=12, weight="bold"), text_color="#64748b").pack(pady=(10, 0))
+        self.feedback_label = ctk.CTkLabel(feedback_card, text="WAITING FOR POSE...", font=ctk.CTkFont(size=14, weight="bold"), wraplength=250, text_color="yellow")
+        self.feedback_label.pack(pady=(0, 15), padx=20)
 
-        # New: History Scrollable Frame
-        ctk.CTkLabel(stats_panel, text="HISTORY", font=ctk.CTkFont(size=14, weight="bold"), text_color="gray").pack(pady=(20, 5))
-        self.history_scroll = ctk.CTkScrollableFrame(stats_panel, fg_color="#0f172a", height=300)
-        self.history_scroll.pack(fill="both", expand=True, padx=10, pady=10)
+        # History Section
+        ctk.CTkLabel(stats_panel, text="SESSION LOGS", font=ctk.CTkFont(size=14, weight="bold", family="Orbitron"), text_color="#64748b").pack(pady=(20, 5))
+        self.history_scroll = ctk.CTkScrollableFrame(stats_panel, fg_color=BG_COLOR, height=350, corner_radius=10)
+        self.history_scroll.pack(fill="both", expand=True, padx=15, pady=10)
 
         self.is_running = True
         self.update_frame()
@@ -494,7 +628,8 @@ class MainApp(TkinterDnD.Tk):
         if self.update_job:
             self.after_cancel(self.update_job)
         
-        self.save_session() # New: Save data
+        # Save session before exiting
+        self.save_session()
         
         if self.selected_source is not None and isinstance(self.selected_source, cv2.VideoCapture):
             self.selected_source.release()
@@ -575,6 +710,7 @@ class MainApp(TkinterDnD.Tk):
                 self.add_history_item(rep_entry)
 
                 self.last_feedback = " | ".join(result["feedback"])
+                print(f"--- REP {reps_count} FEEDBACK: {self.last_feedback} ---") # Added terminal print
                 self.feedback_label.configure(text=self.last_feedback.replace(" | ", "\n"))
             elif not rep_done:
                 if hasattr(self.analyser, "get_live_feedback"):
@@ -612,16 +748,28 @@ class MainApp(TkinterDnD.Tk):
         return img
 
     def add_history_item(self, rep_data):
-        color = "#10b981" if rep_data["success"] else "#ef4444"
+        success_color = "#10b981" if rep_data["success"] else "#ef4444"
         
-        item = ctk.CTkFrame(self.history_scroll, fg_color="#1e293b", height=40)
-        item.pack(fill="x", pady=2, padx=5)
+        item = ctk.CTkFrame(self.history_scroll, fg_color=SIDEBAR_COLOR, height=45, corner_radius=8, border_width=1, border_color="#334155")
+        item.pack(fill="x", pady=4, padx=5)
         
-        ctk.CTkLabel(item, text=f"Rep {rep_data['rep_num']}", font=ctk.CTkFont(size=12, weight="bold")).pack(side="left", padx=10)
-        ctk.CTkLabel(item, text=f"{rep_data['tempo']}s", text_color=color).pack(side="right", padx=10)
+        ctk.CTkLabel(
+            item, 
+            text=f"REP {rep_data['rep_num']}", 
+            font=ctk.CTkFont(size=12, weight="bold", family="Orbitron"),
+            text_color=ACCENT_COLOR
+        ).pack(side="left", padx=15)
+        
+        ctk.CTkLabel(
+            item, 
+            text=f"{rep_data['tempo']}s", 
+            font=ctk.CTkFont(size=12, weight="bold"),
+            text_color=success_color
+        ).pack(side="right", padx=15)
 
     def save_session(self):
         if not self.session_data:
+            print("Session not saved: No reps completed.")
             return
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -635,6 +783,8 @@ class MainApp(TkinterDnD.Tk):
         }
 
         try:
+            if not os.path.exists("sessions"):
+                os.makedirs("sessions")
             with open(filename, 'w') as f:
                 json.dump(summary, f, indent=4)
             print(f"Session saved to {filename}")

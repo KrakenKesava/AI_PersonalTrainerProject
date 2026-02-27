@@ -1,42 +1,15 @@
 # pullup.py
 import time
+from .base_exercise import BaseExercise
 
-class PullupAnalyser:
-
+class PullupAnalyser(BaseExercise):
     def __init__(self):
-        self.min_angle = 180
-        self.max_angle = 0
-        self.rep_start_time = None
-        self.prev_angle = None
-        self.angle_velocity_sum = 0
-        self.frame_count = 0
-
-    def update(self, angle):
-        """
-        Call every frame to track motion and tempo
-        """
-
-        # Track ROM
-        self.min_angle = min(self.min_angle, angle)
-        self.max_angle = max(self.max_angle, angle)
-
-        # Start timer when movement begins
-        if self.rep_start_time is None:
-            self.rep_start_time = time.time()
-
-        # Track smoothness (velocity changes)
-        if self.prev_angle is not None:
-            velocity = abs(angle - self.prev_angle)
-            self.angle_velocity_sum += velocity
-
-        self.prev_angle = angle
-        self.frame_count += 1
+        super().__init__()
 
     def analyse_rep(self):
         """
         Call when rep_completed == True
         """
-
         feedback = []
         formCorrect = True
 
@@ -44,64 +17,77 @@ class PullupAnalyser:
         # RANGE OF MOTION
         # =========================
         rom = self.max_angle - self.min_angle
-        if rom < 90:
-            feedback.append("Increase range of motion")
+        
+        # Specific Feedback for Pullups
+        if rom < 85:
+            feedback.append("Drastic partial range! Focus on full movement.")
+            formCorrect = False
+        elif rom < 110:
+            feedback.append("Incomplete range - work on depth/height")
             formCorrect = False
 
         # =========================
-        # TOP CHECK
+        # TOP CHECK (Chin above bar)
         # =========================
-        if self.min_angle > 55:
-            feedback.append("Pull higher")
+        # Min angle 55 is good, but let's be more descriptive
+        if self.min_angle > 65:
+            feedback.append("PULL HIGHER: Chin not reaching the bar")
             formCorrect = False
+        elif self.min_angle > 50:
+            feedback.append("Close to top, but pull slightly higher")
         else:
-            feedback.append("Good pull height")
+            feedback.append("Great pull height - chin cleared!")
 
         # =========================
-        # BOTTOM CHECK
+        # BOTTOM CHECK (Dead hang / Lockout)
         # =========================
-        if self.max_angle < 145:
-            feedback.append("Extend fully")
+        if self.max_angle < 140:
+            feedback.append("EXTEND FULLY: Arm lockout missing at bottom")
             formCorrect = False
+        elif self.max_angle < 155:
+            feedback.append("Almost full extension - drop slightly lower")
         else:
-            feedback.append("Full extension correct")
+            feedback.append("Full extension reached")
 
         # =========================
         # TEMPO CHECK
         # =========================
-        rep_time = time.time() - self.rep_start_time if self.rep_start_time else 0
-
-        if rep_time < 0.8:
-            feedback.append("Too fast - slow down")
+        rep_time = self.calculate_tempo()
+        if rep_time < 0.7:
+            feedback.append("Too explosive/fast - control the drop")
             formCorrect = False
-        elif rep_time > 4:
-            feedback.append("Good control")
+        elif rep_time > 4.5:
+            feedback.append("Good slow control")
         else:
-            feedback.append("Nice tempo")   # Tempo = The speed at which you perform one full repetition.
+            feedback.append("Stable tempo")
 
         # =========================
         # SMOOTHNESS CHECK
         # =========================
         if self.frame_count > 0:
             avg_velocity = self.angle_velocity_sum / self.frame_count
-            if avg_velocity > 8:
-                feedback.append("Reduce swinging")
+            if avg_velocity > 10:
+                feedback.append("WARNING: Excessive swinging/kicking detected")
                 formCorrect = False
 
         if formCorrect:
-            feedback.append("Perfect Pull-Up!")
+            feedback.append("PRO FORM: Perfect Pull-Up!")
 
-        # RESET
-        self.min_angle = 180
-        self.max_angle = 0
-        self.rep_start_time = None
-        self.prev_angle = None
-        self.angle_velocity_sum = 0
-        self.frame_count = 0
-
-        return {
+        result = {
             "formCorrect": formCorrect,
             "feedback": feedback,
             "rom": round(rom, 1),
             "repTime": round(rep_time, 2)
         }
+        
+        self.reset()
+        return result
+
+    def get_live_feedback(self, angle):
+        if angle > 150:
+            return "PULL UP"
+        elif angle < 60:
+            return "GOOD TOP - LOWER FULLY"
+        elif angle < 100:
+            return "ALMOST AT TOP"
+        return "KEEP MOVING"
