@@ -2,6 +2,7 @@
 import time
 from .base_exercise import BaseExercise
 
+
 class PullupAnalyser(BaseExercise):
     def __init__(self):
         super().__init__()
@@ -17,7 +18,7 @@ class PullupAnalyser(BaseExercise):
         # RANGE OF MOTION
         # =========================
         rom = self.max_angle - self.min_angle
-        
+
         # Specific Feedback for Pullups
         if rom < 85:
             feedback.append("Drastic partial range! Focus on full movement.")
@@ -79,7 +80,7 @@ class PullupAnalyser(BaseExercise):
             "rom": round(rom, 1),
             "repTime": round(rep_time, 2)
         }
-        
+
         self.reset()
         return result
 

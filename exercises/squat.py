@@ -2,6 +2,7 @@
 import time
 from .base_exercise import BaseExercise
 
+
 class SquatAnalyser(BaseExercise):
     def __init__(self):
         super().__init__()
@@ -68,7 +69,7 @@ class SquatAnalyser(BaseExercise):
             "rom": round(rom, 1),
             "repTime": round(rep_time, 2)
         }
-        
+
         self.reset()
         return result
 

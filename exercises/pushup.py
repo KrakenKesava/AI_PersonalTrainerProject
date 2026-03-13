@@ -2,6 +2,7 @@
 import time
 from .base_exercise import BaseExercise
 
+
 class PushupAnalyser(BaseExercise):
     def __init__(self):
         super().__init__()
@@ -68,7 +69,7 @@ class PushupAnalyser(BaseExercise):
             "rom": round(rom, 1),
             "repTime": round(rep_time, 2)
         }
-        
+
         self.reset()
         return result
 
