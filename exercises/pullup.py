@@ -1,4 +1,4 @@
-# pullup.py
+# exercise/pullup.py
 import time
 from .base_exercise import BaseExercise
 

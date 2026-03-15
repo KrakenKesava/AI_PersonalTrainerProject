@@ -1,3 +1,4 @@
+#cameraModule.py
 import cv2
 
 # Try to get camera names (Windows only)
