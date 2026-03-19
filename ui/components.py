@@ -1,8 +1,14 @@
+# ui/components.py
 import os
+import math
 import customtkinter as ctk
 from PIL import Image
 from ui import theme
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SIDEBAR BUTTON
+# ─────────────────────────────────────────────────────────────────────────────
 class SidebarButton(ctk.CTkButton):
     def __init__(self, parent, text, command, active=False, **kwargs):
         super().__init__(
@@ -10,17 +16,87 @@ class SidebarButton(ctk.CTkButton):
             text=text,
             command=command,
             anchor="w",
-            height=50,
+            height=46,
             fg_color=theme.ACCENT if active else "transparent",
-            text_color="#000000" if active else theme.SUBTEXT,
-            hover_color="#1a2a47",
-            font=theme.get_font(15, "bold" if active else "normal"),
-            corner_radius=12,
-            border_width=0,
+            text_color=theme.TEXT_ON_ACCENT if active else theme.SUBTEXT,
+            hover_color=theme.CARD_HOVER,
+            font=theme.get_font(13, "bold" if active else "normal"),
+            corner_radius=theme.BTN_RADIUS,
+            border_width=1 if active else 0,
+            border_color=theme.ACCENT if active else theme.SIDEBAR,
             **kwargs
         )
-        self.pack(fill="x", pady=5, padx=20)
+        self.pack(fill="x", pady=4, padx=16)
 
+    def set_active(self, active: bool):
+        self.configure(
+            fg_color=theme.ACCENT if active else "transparent",
+            text_color=theme.TEXT_ON_ACCENT if active else theme.SUBTEXT,
+            font=theme.get_font(13, "bold" if active else "normal"),
+            border_width=1 if active else 0,
+            border_color=theme.ACCENT if active else theme.SIDEBAR,
+        )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SIDEBAR SESSION ITEM
+# ─────────────────────────────────────────────────────────────────────────────
+class SessionListItem(ctk.CTkFrame):
+    def __init__(self, parent, exercise, date_str, total_reps, success_rate, command, **kwargs):
+        super().__init__(
+            parent,
+            fg_color=theme.CARD,
+            corner_radius=10,
+            border_width=1,
+            border_color=theme.BORDER,
+            cursor="hand2",
+            **kwargs
+        )
+        self.command = command
+
+        top = ctk.CTkFrame(self, fg_color="transparent")
+        top.pack(fill="x", padx=12, pady=(10, 2))
+
+        ctk.CTkLabel(
+            top, text=exercise.upper(),
+            font=theme.get_font(11, "bold"),
+            text_color=theme.ACCENT
+        ).pack(side="left")
+
+        rate_color = theme.SUCCESS if success_rate >= 70 else (theme.WARNING if success_rate >= 40 else theme.DANGER)
+        ctk.CTkLabel(
+            top, text=f"{success_rate}%",
+            font=theme.get_font(11, "bold"),
+            text_color=rate_color
+        ).pack(side="right")
+
+        bottom = ctk.CTkFrame(self, fg_color="transparent")
+        bottom.pack(fill="x", padx=12, pady=(0, 10))
+
+        ctk.CTkLabel(
+            bottom, text=date_str,
+            font=theme.get_font(10),
+            text_color=theme.SUBTEXT
+        ).pack(side="left")
+
+        ctk.CTkLabel(
+            bottom, text=f"{total_reps} reps",
+            font=theme.get_font(10),
+            text_color=theme.SUBTEXT
+        ).pack(side="right")
+
+        for w in [self] + list(self.winfo_children()) + [top, bottom] + list(top.winfo_children()) + list(bottom.winfo_children()):
+            try:
+                w.bind("<Button-1>", lambda e: self.command())
+                w.bind("<Enter>", lambda e: self.configure(border_color=theme.ACCENT))
+                w.bind("<Leave>", lambda e: self.configure(border_color=theme.BORDER))
+            except Exception:
+                pass
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# EXERCISE CARD
+# ─────────────────────────────────────────────────────────────────────────────
 class ExerciseCard(ctk.CTkFrame):
     def __init__(self, parent, name, desc, img_path, command, **kwargs):
         super().__init__(
@@ -28,135 +104,618 @@ class ExerciseCard(ctk.CTkFrame):
             fg_color=theme.CARD,
             corner_radius=theme.CARD_RADIUS,
             cursor="hand2",
-            border_width=2,
-            border_color="#1e293b",
+            border_width=1,
+            border_color=theme.BORDER,
             **kwargs
         )
-        
         self.command = command
-        
-        # Banner Image Area
-        self.img_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.img_frame.pack(fill="x", pady=(20, 10))
-        
+        self._build(name, desc, img_path)
+        self._bind_all()
+
+    def _build(self, name, desc, img_path):
+        img_frame = ctk.CTkFrame(self, fg_color="transparent")
+        img_frame.pack(pady=(24, 8))
+
         if img_path and os.path.exists(img_path):
             try:
                 img = Image.open(img_path)
-                ctk_img = ctk.CTkImage(light_image=img, dark_image=img, size=(180, 180))
-                self.logo_label = ctk.CTkLabel(self.img_frame, image=ctk_img, text="")
-                self.logo_label.pack()
+                ctk_img = ctk.CTkImage(light_image=img, dark_image=img, size=(140, 140))
+                ctk.CTkLabel(img_frame, image=ctk_img, text="").pack()
             except Exception:
-                self.logo_label = ctk.CTkLabel(self.img_frame, text="🏋️", font=theme.get_font(64))
-                self.logo_label.pack()
+                ctk.CTkLabel(img_frame, text="🏋️", font=theme.get_font(56)).pack()
         else:
-            self.logo_label = ctk.CTkLabel(self.img_frame, text="🏋️", font=theme.get_font(64))
-            self.logo_label.pack()
-
-        self.title_label = ctk.CTkLabel(
-            self,
-            text=name.upper(),
-            font=theme.get_font(22, "bold"),
-            text_color=theme.ACCENT
-        )
-        self.title_label.pack(pady=(10, 5))
-
-        self.desc_label = ctk.CTkLabel(
-            self,
-            text=desc,
-            font=theme.get_font(15),
-            text_color=theme.SUBTEXT,
-            wraplength=300
-        )
-        self.desc_label.pack(pady=(0, 20), padx=30)
-
-        # Start Workout Button
-        self.start_btn = StyledButton(
-            self, 
-            text="START WORKOUT", 
-            command=self.command,
-            type="primary",
-            width=200,
-            height=45
-        )
-        self.start_btn.pack(pady=(0, 30))
-
-        # Bindings for hover
-        self.bind("<Enter>", self.on_enter)
-        self.bind("<Leave>", self.on_leave)
-        
-        # Recursive bind
-        self.bind_widgets(self)
-
-    def bind_widgets(self, widget):
-        for child in widget.winfo_children():
-            if not isinstance(child, ctk.CTkButton):
-                child.bind("<Enter>", self.on_enter)
-                child.bind("<Leave>", self.on_leave)
-                child.bind("<Button-1>", lambda e: self.command())
-                self.bind_widgets(child)
-
-    def on_enter(self, e):
-        self.configure(border_color=theme.ACCENT, border_width=3)
-        self.configure(fg_color="#1d2b4a")
-
-    def on_leave(self, e):
-        self.configure(border_color="#1e293b", border_width=2)
-        self.configure(fg_color=theme.CARD)
-
-class ChatBubble(ctk.CTkFrame):
-    def __init__(self, parent, text, is_user=True, **kwargs):
-        align = "right" if is_user else "left"
-        bg_color = "#1a2a47" if is_user else "#1e293b"
-        border_color = theme.SECONDARY if is_user else theme.ACCENT
-        
-        super().__init__(parent, fg_color="transparent", **kwargs)
-        self.pack(fill="x", pady=15)
-        
-        inner_bubble = ctk.CTkFrame(
-            self, 
-            fg_color=bg_color, 
-            corner_radius=18,
-            border_width=2,
-            border_color=border_color
-        )
-        inner_bubble.pack(side=align, padx=10)
+            ctk.CTkLabel(img_frame, text="🏋️", font=theme.get_font(56)).pack()
 
         ctk.CTkLabel(
-            inner_bubble,
-            text=text,
-            font=theme.get_font(15),
-            text_color=theme.TEXT,
-            wraplength=500,
-            justify="left"
-        ).pack(padx=20, pady=15)
+            self, text=name.upper(),
+            font=theme.get_font(20, "bold"),
+            text_color=theme.ACCENT
+        ).pack(pady=(6, 4))
 
-class StyledButton(ctk.CTkButton):
-    def __init__(self, parent, text, command, type="primary", **kwargs):
-        fg = theme.ACCENT if type == "primary" else "transparent"
-        txt = "#000000" if type == "primary" else theme.TEXT
-        border = 0 if type == "primary" else 2
-        
-        # FIXED: Avoiding "transparent" for border_color to prevent ValueError
-        border_col = theme.ACCENT if type == "primary" else theme.SECONDARY
-        hover = theme.SECONDARY if type == "primary" else "#1a2a47"
-        
-        if type == "danger":
-            fg = theme.DANGER
-            txt = theme.TEXT
-            hover = "#cc0000"
-            border = 0
-            border_col = theme.DANGER
+        ctk.CTkLabel(
+            self, text=desc,
+            font=theme.get_font(13),
+            text_color=theme.SUBTEXT,
+            wraplength=260
+        ).pack(pady=(0, 20), padx=20)
+
+    def _bind_all(self):
+        def on_enter(e):
+            self.configure(border_color=theme.ACCENT, border_width=2, fg_color=theme.CARD_HOVER)
+        def on_leave(e):
+            self.configure(border_color=theme.BORDER, border_width=1, fg_color=theme.CARD)
+
+        for w in self.winfo_children() + [self]:
+            try:
+                w.bind("<Enter>", on_enter)
+                w.bind("<Leave>", on_leave)
+                w.bind("<Button-1>", lambda e: self.command())
+            except Exception:
+                pass
+
+        for child in self.winfo_children():
+            for grandchild in child.winfo_children():
+                try:
+                    grandchild.bind("<Enter>", on_enter)
+                    grandchild.bind("<Leave>", on_leave)
+                    grandchild.bind("<Button-1>", lambda e: self.command())
+                except Exception:
+                    pass
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STAT CARD  (metric display)
+# ─────────────────────────────────────────────────────────────────────────────
+class StatCard(ctk.CTkFrame):
+    def __init__(self, parent, label, value="–", unit="", color=None, **kwargs):
+        super().__init__(
+            parent,
+            fg_color=theme.CARD,
+            corner_radius=12,
+            border_width=1,
+            border_color=theme.BORDER,
+            **kwargs
+        )
+        self._color = color or theme.ACCENT
+
+        ctk.CTkLabel(
+            self, text=label.upper(),
+            font=theme.get_font(10, "bold"),
+            text_color=theme.SUBTEXT
+        ).pack(pady=(12, 2))
+
+        self._val_label = ctk.CTkLabel(
+            self, text=value,
+            font=theme.mono(32, "bold"),
+            text_color=self._color
+        )
+        self._val_label.pack()
+
+        if unit:
+            ctk.CTkLabel(
+                self, text=unit,
+                font=theme.get_font(11),
+                text_color=theme.SUBTEXT
+            ).pack(pady=(0, 10))
+        else:
+            ctk.CTkFrame(self, fg_color="transparent", height=10).pack()
+
+    def set_value(self, value: str, color=None):
+        self._val_label.configure(text=str(value), text_color=color or self._color)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ANIMATED REP COUNTER
+# ─────────────────────────────────────────────────────────────────────────────
+class AnimatedRepCounter(ctk.CTkFrame):
+    """Large animated rep counter with a circular progress ring drawn on canvas."""
+
+    RING_SIZE = 140
+    RING_WIDTH = 10
+
+    def __init__(self, parent, **kwargs):
+        super().__init__(parent, fg_color="transparent", **kwargs)
+        self._reps = 0
+        self._target = 0
+        self._anim_after = None
+
+        import tkinter as tk
+        self._canvas = tk.Canvas(
+            self,
+            width=self.RING_SIZE,
+            height=self.RING_SIZE,
+            bg=theme.BACKGROUND,
+            highlightthickness=0
+        )
+        self._canvas.pack(pady=(8, 0))
+
+        self._rep_text = ctk.CTkLabel(
+            self, text="0",
+            font=theme.mono(42, "bold"),
+            text_color=theme.ACCENT
+        )
+        self._rep_text.place(
+            x=self.RING_SIZE // 2,
+            y=self.RING_SIZE // 2,
+            anchor="center"
+        )
+
+        ctk.CTkLabel(
+            self, text="REPS",
+            font=theme.get_font(10, "bold"),
+            text_color=theme.SUBTEXT
+        ).pack(pady=(4, 8))
+
+        self._draw_ring(0)
+
+    def _draw_ring(self, pct: float):
+        c = self._canvas
+        c.delete("all")
+        pad = self.RING_WIDTH + 4
+        size = self.RING_SIZE
+        # Background ring
+        c.create_arc(pad, pad, size - pad, size - pad,
+                     start=90, extent=360,
+                     style="arc", outline=theme.BORDER,
+                     width=self.RING_WIDTH)
+        if pct > 0:
+            extent = -pct * 3.6  # 0-100 → 0-360
+            c.create_arc(pad, pad, size - pad, size - pad,
+                         start=90, extent=extent,
+                         style="arc", outline=theme.ACCENT,
+                         width=self.RING_WIDTH)
+
+    def set_reps(self, reps: int, total: int = 0):
+        self._target = reps
+        self._animate()
+        pct = (reps / total * 100) if total > 0 else 0
+        self._draw_ring(min(pct, 100))
+        self._rep_text.configure(text=str(reps))
+
+    def _animate(self):
+        if self._anim_after:
+            try:
+                self._rep_text.after_cancel(self._anim_after)
+            except Exception:
+                pass
+        # Quick flash effect
+        self._rep_text.configure(text_color=theme.WARNING)
+        self._anim_after = self._rep_text.after(
+            180, lambda: self._rep_text.configure(text_color=theme.ACCENT)
+        )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# FEEDBACK BAR
+# ─────────────────────────────────────────────────────────────────────────────
+class FeedbackBar(ctk.CTkFrame):
+    def __init__(self, parent, **kwargs):
+        super().__init__(
+            parent,
+            fg_color=theme.CARD,
+            corner_radius=10,
+            border_width=1,
+            border_color=theme.BORDER,
+            **kwargs
+        )
+        ctk.CTkLabel(
+            self, text="LIVE ANALYSIS",
+            font=theme.get_font(10, "bold"),
+            text_color=theme.SUBTEXT
+        ).pack(anchor="w", padx=14, pady=(10, 2))
+
+        self._label = ctk.CTkLabel(
+            self, text="Waiting for pose...",
+            font=theme.get_font(13),
+            text_color=theme.WARNING,
+            wraplength=260,
+            justify="left"
+        )
+        self._label.pack(anchor="w", padx=14, pady=(0, 12))
+
+    def set_text(self, text: str, level: str = "warning"):
+        color_map = {
+            "good": theme.SUCCESS,
+            "warning": theme.WARNING,
+            "error": theme.DANGER,
+            "info": theme.ACCENT,
+        }
+        self._label.configure(text=text, text_color=color_map.get(level, theme.WARNING))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PROGRESS BAR ROW
+# ─────────────────────────────────────────────────────────────────────────────
+class LabeledProgressBar(ctk.CTkFrame):
+    def __init__(self, parent, label: str, value: float = 0.0, **kwargs):
+        super().__init__(parent, fg_color="transparent", **kwargs)
+
+        row = ctk.CTkFrame(self, fg_color="transparent")
+        row.pack(fill="x")
+
+        ctk.CTkLabel(row, text=label, font=theme.get_font(11), text_color=theme.SUBTEXT).pack(side="left")
+        self._pct_label = ctk.CTkLabel(row, text="0%", font=theme.get_font(11, "bold"), text_color=theme.TEXT)
+        self._pct_label.pack(side="right")
+
+        self._bar = ctk.CTkProgressBar(self, height=5, corner_radius=3, fg_color=theme.BORDER, progress_color=theme.ACCENT)
+        self._bar.pack(fill="x", pady=(3, 0))
+        self._bar.set(value)
+
+    def set_value(self, value: float):
+        """value: 0.0 – 1.0"""
+        value = max(0.0, min(1.0, value))
+        self._bar.set(value)
+        pct = int(value * 100)
+        if pct >= 70:
+            color = theme.SUCCESS
+        elif pct >= 40:
+            color = theme.WARNING
+        else:
+            color = theme.DANGER
+        self._bar.configure(progress_color=color)
+        self._pct_label.configure(text=f"{pct}%")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CAMERA CARD (source selector)
+# ─────────────────────────────────────────────────────────────────────────────
+class CameraCard(ctk.CTkFrame):
+    def __init__(self, parent, index: int, name: str, is_active: bool, command, **kwargs):
+        super().__init__(
+            parent,
+            fg_color=theme.CARD,
+            corner_radius=12,
+            border_width=1,
+            border_color=theme.BORDER,
+            cursor="hand2",
+            **kwargs
+        )
+        self.command = command
+
+        ctk.CTkLabel(
+            self, text=f"CAM {index}",
+            font=theme.get_font(11, "bold"),
+            text_color=theme.ACCENT
+        ).pack(pady=(14, 2))
+
+        ctk.CTkLabel(
+            self, text=name,
+            font=theme.get_font(11),
+            text_color=theme.SUBTEXT
+        ).pack(padx=10)
+
+        badge_color = theme.SUCCESS if is_active else theme.SUBTEXT
+        ctk.CTkLabel(
+            self, text="● ACTIVE" if is_active else "AVAILABLE",
+            font=theme.get_font(9, "bold"),
+            text_color=badge_color
+        ).pack(pady=(4, 14))
+
+        for w in [self] + list(self.winfo_children()):
+            try:
+                w.bind("<Button-1>", lambda e: self.command())
+                w.bind("<Enter>", lambda e: self.configure(border_color=theme.ACCENT))
+                w.bind("<Leave>", lambda e: self.configure(border_color=theme.BORDER))
+            except Exception:
+                pass
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DROP ZONE
+# ─────────────────────────────────────────────────────────────────────────────
+class DropZone(ctk.CTkFrame):
+    def __init__(self, parent, on_file_selected, **kwargs):
+        super().__init__(
+            parent,
+            fg_color=theme.BACKGROUND,
+            corner_radius=14,
+            border_width=2,
+            border_color=theme.BORDER,
+            **kwargs
+        )
+        self._callback = on_file_selected
+        self._file_loaded = False
+
+        self._icon = ctk.CTkLabel(self, text="⬆", font=theme.get_font(36), text_color=theme.SUBTEXT)
+        self._icon.pack(pady=(28, 4))
+
+        self._title = ctk.CTkLabel(
+            self, text="Drag & drop video here",
+            font=theme.get_font(14, "bold"),
+            text_color=theme.TEXT
+        )
+        self._title.pack()
+
+        self._sub = ctk.CTkLabel(
+            self, text="MP4 · AVI · MOV · MKV",
+            font=theme.get_font(11),
+            text_color=theme.SUBTEXT
+        )
+        self._sub.pack(pady=(2, 16))
+
+        self._browse_btn = StyledButton(
+            self, text="Browse files", command=self._browse,
+            type="secondary", width=130, height=34
+        )
+        self._browse_btn.pack(pady=(0, 20))
+
+        # Register DnD if available
+        try:
+            self.drop_target_register("DND_Files")  # tkinterdnd2
+            self.dnd_bind("<<Drop>>", self._on_drop)
+        except Exception:
+            pass
+
+    def _browse(self):
+        from tkinter import filedialog
+        path = filedialog.askopenfilename(
+            filetypes=[("Video files", "*.mp4 *.avi *.mov *.mkv")]
+        )
+        if path:
+            self._set_file(path)
+
+    def _on_drop(self, event):
+        path = event.data.strip("{}")
+        ext = path.split(".")[-1].lower()
+        if ext in ("mp4", "avi", "mov", "mkv"):
+            self._set_file(path)
+
+    def _set_file(self, path):
+        import os
+        name = os.path.basename(path)
+        size_mb = round(os.path.getsize(path) / 1_048_576, 1)
+        self._file_loaded = True
+        self.configure(border_color=theme.ACCENT, border_width=2)
+        self._icon.configure(text="✓", text_color=theme.SUCCESS)
+        self._title.configure(text=name, text_color=theme.SUCCESS)
+        self._sub.configure(text=f"{size_mb} MB  ·  Ready to analyse")
+        self._browse_btn.configure(text="Change file")
+        self._callback(path)
+
+    def reset(self):
+        self._file_loaded = False
+        self.configure(border_color=theme.BORDER)
+        self._icon.configure(text="⬆", text_color=theme.SUBTEXT)
+        self._title.configure(text="Drag & drop video here", text_color=theme.TEXT)
+        self._sub.configure(text="MP4 · AVI · MOV · MKV", text_color=theme.SUBTEXT)
+        self._browse_btn.configure(text="Browse files")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HISTORY REP ITEM
+# ─────────────────────────────────────────────────────────────────────────────
+class RepHistoryItem(ctk.CTkFrame):
+    def __init__(self, parent, rep_data: dict, **kwargs):
+        n = rep_data.get("rep_num", "?")
+        tempo = rep_data.get("tempo", 0)
+        success = rep_data.get("success", False)
+        rom = rep_data.get("rom", 0)
+
+        color = theme.SUCCESS if success else theme.DANGER
 
         super().__init__(
             parent,
-            text=text,
-            command=command,
-            fg_color=fg,
-            text_color=txt,
-            hover_color=hover,
-            border_width=border,
-            border_color=border_col,
-            corner_radius=12,
-            font=theme.get_font(14, "bold"),
+            fg_color=theme.CARD,
+            corner_radius=8,
+            border_width=1,
+            border_color=color,
             **kwargs
         )
+
+        left = ctk.CTkFrame(self, fg_color="transparent")
+        left.pack(side="left", padx=12, pady=8)
+
+        ctk.CTkLabel(
+            left, text=f"REP {n}",
+            font=theme.get_font(12, "bold"),
+            text_color=theme.ACCENT
+        ).pack(anchor="w")
+
+        ctk.CTkLabel(
+            left, text=f"ROM {rom:.1f}°",
+            font=theme.get_font(10),
+            text_color=theme.SUBTEXT
+        ).pack(anchor="w")
+
+        right = ctk.CTkFrame(self, fg_color="transparent")
+        right.pack(side="right", padx=12, pady=8)
+
+        ctk.CTkLabel(
+            right, text=f"{tempo:.2f}s",
+            font=theme.get_font(12, "bold"),
+            text_color=color
+        ).pack()
+
+        ctk.CTkLabel(
+            right, text="✓ OK" if success else "✗ FAIL",
+            font=theme.get_font(9, "bold"),
+            text_color=color
+        ).pack()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STYLED BUTTON
+# ─────────────────────────────────────────────────────────────────────────────
+class StyledButton(ctk.CTkButton):
+    def __init__(self, parent, text, command, type="primary", **kwargs):
+        styles = {
+            "primary": dict(fg_color=theme.ACCENT, text_color=theme.TEXT_ON_ACCENT, hover_color=theme.SECONDARY, border_width=0),
+            "secondary": dict(fg_color="transparent", text_color=theme.TEXT, hover_color=theme.CARD_HOVER, border_width=1, border_color=theme.BORDER),
+            "danger": dict(fg_color=theme.DANGER, text_color=theme.TEXT, hover_color="#cc0000", border_width=0),
+            "ghost": dict(fg_color="transparent", text_color=theme.ACCENT, hover_color=theme.CARD_HOVER, border_width=1, border_color=theme.ACCENT),
+        }
+        s = styles.get(type, styles["primary"])
+        super().__init__(
+            parent, text=text, command=command,
+            corner_radius=theme.BTN_RADIUS,
+            font=theme.get_font(13, "bold"),
+            **s, **kwargs
+        )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SECTION LABEL
+# ─────────────────────────────────────────────────────────────────────────────
+class SectionLabel(ctk.CTkLabel):
+    def __init__(self, parent, text, **kwargs):
+        super().__init__(
+            parent, text=text.upper(),
+            font=theme.get_font(10, "bold"),
+            text_color=theme.SUBTEXT,
+            **kwargs
+        )
+
+# ─────────────────────────────────────────────────────────────────────────────
+# EXERCISE CARD WITH VIDEO PREVIEW
+# ─────────────────────────────────────────────────────────────────────────────
+class ExerciseCard(ctk.CTkFrame):
+    def __init__(self, parent, name, desc, img_path, video_path, command, **kwargs):
+        super().__init__(
+            parent,
+            fg_color=theme.CARD,
+            corner_radius=theme.CARD_RADIUS,
+            cursor="hand2",
+            border_width=1,
+            border_color=theme.BORDER,
+            **kwargs
+        )
+        self.command    = command
+        self._video_path = video_path
+        self._cap        = None
+        self._after_id   = None
+        self._playing    = False
+
+        self._build(name, desc, img_path)
+        self._bind_all()
+
+    def _build(self, name, desc, img_path):
+        # Video/image display area
+        self._preview_frame = ctk.CTkFrame(
+            self, fg_color=theme.BACKGROUND,
+            corner_radius=10, width=200, height=150
+        )
+        self._preview_frame.pack(pady=(20, 8), padx=20, fill="x")
+        self._preview_frame.pack_propagate(False)
+
+        self._preview_label = ctk.CTkLabel(self._preview_frame, text="")
+        self._preview_label.pack(fill="both", expand=True)
+
+        # Load static thumbnail first
+        self._thumbnail = None
+        if img_path and os.path.exists(img_path):
+            try:
+                img = Image.open(img_path).resize((200, 150))
+                self._thumbnail = ctk.CTkImage(
+                    light_image=img, dark_image=img, size=(200, 150)
+                )
+                self._preview_label.configure(image=self._thumbnail, text="")
+            except Exception:
+                self._preview_label.configure(text="🏋️", font=theme.get_font(48))
+        else:
+            self._preview_label.configure(text="🏋️", font=theme.get_font(48))
+
+        # Play indicator overlay
+        self._play_badge = ctk.CTkLabel(
+            self._preview_frame,
+            text="▶ DEMO",
+            font=theme.get_font(10, "bold"),
+            text_color=theme.ACCENT,
+            fg_color=theme.BACKGROUND,
+            corner_radius=6,
+            padx=6, pady=2
+        )
+        self._play_badge.place(relx=1.0, rely=0.0, anchor="ne", x=-6, y=6)
+
+        # Title and description
+        ctk.CTkLabel(
+            self, text=name.upper(),
+            font=theme.get_font(18, "bold"),
+            text_color=theme.ACCENT
+        ).pack(pady=(6, 2))
+
+        ctk.CTkLabel(
+            self, text=desc,
+            font=theme.get_font(12),
+            text_color=theme.SUBTEXT,
+            wraplength=240
+        ).pack(pady=(0, 16), padx=20)
+
+    def _bind_all(self):
+        def on_enter(e):
+            self.configure(border_color=theme.ACCENT, border_width=2,
+                           fg_color=theme.CARD_HOVER)
+            self._start_video()
+
+        def on_leave(e):
+            self.configure(border_color=theme.BORDER, border_width=1,
+                           fg_color=theme.CARD)
+            self._stop_video()
+
+        def on_click(e):
+            self.command()
+
+        targets = [self] + list(self.winfo_children()) + [self._preview_frame, self._preview_label]
+        for w in targets:
+            try:
+                w.bind("<Enter>", on_enter)
+                w.bind("<Leave>", on_leave)
+                w.bind("<Button-1>", on_click)
+            except Exception:
+                pass
+
+    def _start_video(self):
+        if not self._video_path or not os.path.exists(self._video_path):
+            return
+        if self._playing:
+            return
+        self._playing = True
+        self._cap = cv2.VideoCapture(self._video_path)
+        self._play_badge.configure(text="● LIVE")
+        self._next_frame()
+
+    def _next_frame(self):
+        if not self._playing or self._cap is None:
+            return
+        success, frame = self._cap.read()
+        if not success:
+            # Loop back to start
+            self._cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            success, frame = self._cap.read()
+        if success:
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            img_pil   = Image.fromarray(frame_rgb).resize((200, 150))
+            ctk_img   = ctk.CTkImage(light_image=img_pil, dark_image=img_pil, size=(200, 150))
+            self._preview_label.configure(image=ctk_img, text="")
+            self._preview_label.image = ctk_img
+        self._after_id = self.after(42, self._next_frame)  # ~24 fps
+
+    def _stop_video(self):
+        self._playing = False
+        if self._after_id:
+            try:
+                self.after_cancel(self._after_id)
+            except Exception:
+                pass
+            self._after_id = None
+        if self._cap:
+            self._cap.release()
+            self._cap = None
+        # Restore thumbnail
+        if self._thumbnail:
+            self._preview_label.configure(image=self._thumbnail, text="")
+        else:
+            self._preview_label.configure(image=None, text="🏋️")
+        self._play_badge.configure(text="▶ DEMO")
+
+    def destroy(self):
+        self._stop_video()
+        super().destroy()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DIVIDER
+# ─────────────────────────────────────────────────────────────────────────────
+class Divider(ctk.CTkFrame):
+    def __init__(self, parent, **kwargs):
+        super().__init__(parent, fg_color=theme.BORDER, height=1, **kwargs)
+        self.pack(fill="x", padx=16, pady=8)

@@ -1,3 +1,4 @@
+# main.py
 import sourceSelectorGUI as gui
 
 if __name__ == "__main__":
