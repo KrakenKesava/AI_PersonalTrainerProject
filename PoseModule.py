@@ -5,7 +5,7 @@ import cv2
 import math
 
 class poseDetector():
-    def __init__(self, mode=False, smooth=True, detectionCon=0.5, trackCon=0.5):
+    def __init__(self, mode=False, smooth=True, detectionCon=0.9, trackCon=0.9):
         self.mode = mode
         self.model_complexity = 1
         self.smooth_landmarks = smooth

@@ -6,14 +6,24 @@ Screens: Exercise Select → Source Select → Live Workout → Session Review
 """
 
 import os, json, time, threading
+from datetime import datetime
 import cv2
 import numpy as np
 import customtkinter as ctk
-from datetime import datetime
 from PIL import Image, ImageTk
 from tkinter import messagebox
-from tkinterdnd2 import TkinterDnD, DND_FILES
+
 from dotenv import load_dotenv
+from supabase import create_client, Client
+
+load_dotenv()
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+if SUPABASE_URL and SUPABASE_KEY:
+    supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
+else:
+    supabase_client = None
+from tkinterdnd2 import TkinterDnD, DND_FILES
 
 import cameraModule
 import PoseModule as pm
@@ -81,7 +91,7 @@ class MainApp(TkinterDnD.Tk):
         try:
             from google import genai
             self.client = genai.Client(api_key=self.api_key)
-            self.model  = "gemini-3.1-flash-lite-previewS"
+            self.model  = "gemini-3.1-flash-lite-preview"
 
         except Exception as e:
             print(f"[Gemini] init failed: {e}")
@@ -282,10 +292,10 @@ class MainApp(TkinterDnD.Tk):
                 "exerciseVideos/Squads/Squads_Side_Correct.mp4"
             ),
             (
-                "Situps",
-                "Lie on your back with knees bent...",
-                "exerciseVideos/Situps/situps.png",
-                "exerciseVideos/Situps/Situps_Side_Correct.mp4"
+                "Plank",
+                "Hold your body in a straight line, supported by your forearms and toes...",
+                "exerciseVideos/Plank/plank.png",
+                "exerciseVideos/Plank/Plank_Side_Correct.mp4"
             ),
         ]
 
@@ -600,6 +610,11 @@ class MainApp(TkinterDnD.Tk):
             self.analyser  = SquatAnalyser()
             self.angle_pts = (23, 25, 27)
             self.reps.set_thresholds(115, 145)
+        elif ex in ("plank", "planks"):
+            from exercises.plank import PlankAnalyser
+            self.analyser = PlankAnalyser()
+            self.angle_pts = (11, 23, 27) # Shoulder, Hip, Ankle
+            self.reps.set_thresholds(150, 175)
         else:
             self.angle_pts = (11, 13, 15)
             self.reps.set_thresholds(60, 150)
@@ -796,15 +811,49 @@ class MainApp(TkinterDnD.Tk):
     def save_session(self):
         if not self.session_data:
             return
+        
+        session_dict = self._build_session_dict()
+        
+        # 1. Save to Supabase
+        if supabase_client:
+            try:
+                # Insert session
+                session_payload = {
+                    "exercise": session_dict["exercise"],
+                    "session_date": session_dict["date"],
+                    "total_reps": session_dict["total_reps"]
+                }
+                session_resp = supabase_client.table("workout_sessions").insert(session_payload).execute()
+                
+                if session_resp.data:
+                    session_id = session_resp.data[0]['id']
+                    reps_payload = []
+                    for r in session_dict["reps"]:
+                        reps_payload.append({
+                            "session_id": session_id,
+                            "rep_num": r.get("rep_num"),
+                            "rep_timestamp": r.get("timestamp"),
+                            "rom": r.get("rom"),
+                            "tempo": r.get("tempo"),
+                            "success": r.get("success", False),
+                            "feedback": r.get("feedback", [])
+                        })
+                    
+                    if reps_payload:
+                        supabase_client.table("workout_reps").insert(reps_payload).execute()
+                print(f"[Supabase] Session saved successfully.")
+            except Exception as e:
+                print(f"[Supabase] save error: {e}")
+
+        # 2. Local Fallback save
         os.makedirs("sessions", exist_ok=True)
         ts       = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"sessions/session_{self.selected_exercise}_{ts}.json"
         try:
             with open(filename, "w") as f:
-                json.dump(self._build_session_dict(), f, indent=4)
-            print(f"[Session] saved → {filename}")
+                json.dump(session_dict, f, indent=4)
         except Exception as e:
-            print(f"[Session] save error: {e}")
+            pass
 
     # ─────────────────────────────────────────────────────────────────────────
     # AI ASSISTANT (chat screen)
@@ -870,33 +919,48 @@ class MainApp(TkinterDnD.Tk):
         self.show_chat_interface(prefill=prefill)
 
     def _get_session_summary(self) -> str:
-        sd = "sessions"
-        if not os.path.exists(sd):
-            return "No previous session data found."
-        files = sorted([f for f in os.listdir(sd) if f.endswith(".json")], reverse=True)
-        if not files:
-            return "No previous sessions recorded."
-        summary = "User's recent workout history:\n"
-        for fname in files[:3]:
-            try:
-                with open(os.path.join(sd, fname)) as f:
-                    data = json.load(f)
-                reps_list = data.get("reps", [])
-                total = len(reps_list)
-                failed = [r for r in reps_list if not r.get("success")]
+        if not supabase_client:
+            return "No previous session data found. (Supabase not connected)"
+            
+        try:
+            # Fetch last 30 sessions from Supabase to provide long-term historical context
+            resp = supabase_client.table("workout_sessions").select("*, workout_reps(*)").order("created_at", desc=True).limit(30).execute()
+            sessions = resp.data
+            
+            if not sessions:
+                return "No previous sessions recorded in Supabase."
+                
+            summary = "User's recent workout history:\n"
+            for s in sessions:
+                date = s.get('session_date', 'unknown').replace('T', ' ')
+                exercise = s.get('exercise', 'unknown')
+                total = s.get('total_reps', 0)
+                reps_list = s.get('workout_reps', [])
+                
+                failed = [r for r in reps_list if not r.get("success", True)]
                 all_fb = []
                 for r in failed:
                     all_fb.extend(r.get("feedback", []))
-                unique_fb = list(set(all_fb))
-                rate = int((total - len(failed)) / total * 100) if total else 0
-                summary += f"- {data.get('date')}: {data.get('exercise')} ({total} reps, {rate}% success)."
+                
+                # Make list unique
+                from collections import OrderedDict
+                unique_fb = list(OrderedDict.fromkeys(all_fb))
+                
+                rate = int((total - len(failed)) / total * 100) if total > 0 else 0
+                summary += f"- {date}: {exercise} ({total} reps, {rate}% success)."
+                
                 if unique_fb:
                     summary += f" Issues: {', '.join(unique_fb[:3])}.\n"
                 else:
-                    summary += " Perfect form!\n"
-            except Exception:
-                continue
-        return summary
+                    if rate == 100 and total > 0:
+                        summary += " Perfect form!\n"
+                    else:
+                        summary += "\n"
+                        
+            return summary
+        except Exception as e:
+            print(f"[Supabase] fetch error: {e}")
+            return "Error retrieving session history from database."
 
     def send_chat_message(self):
         msg = self.msg_entry.get().strip()

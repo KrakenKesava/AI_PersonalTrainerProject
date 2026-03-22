@@ -360,46 +360,95 @@ class LabeledProgressBar(ctk.CTkFrame):
 # CAMERA CARD (source selector)
 # ─────────────────────────────────────────────────────────────────────────────
 class CameraCard(ctk.CTkFrame):
+    # Class-level registry so cards can deselect each other
+    _all_cards = []
+
     def __init__(self, parent, index: int, name: str, is_active: bool, command, **kwargs):
         super().__init__(
             parent,
             fg_color=theme.CARD,
             corner_radius=12,
-            border_width=1,
-            border_color=theme.BORDER,
+            border_width=2 if is_active else 1,
+            border_color=theme.ACCENT if is_active else theme.BORDER,
             cursor="hand2",
             **kwargs
         )
-        self.command = command
+        self.command    = command
+        self._selected  = is_active
+        self._index     = index
 
-        ctk.CTkLabel(
+        # Register this card
+        CameraCard._all_cards.append(self)
+
+        self._cam_label = ctk.CTkLabel(
             self, text=f"CAM {index}",
             font=theme.get_font(11, "bold"),
             text_color=theme.ACCENT
-        ).pack(pady=(14, 2))
+        )
+        self._cam_label.pack(pady=(14, 2))
 
-        ctk.CTkLabel(
+        self._name_label = ctk.CTkLabel(
             self, text=name,
             font=theme.get_font(11),
             text_color=theme.SUBTEXT
-        ).pack(padx=10)
+        )
+        self._name_label.pack(padx=10)
 
-        badge_color = theme.SUCCESS if is_active else theme.SUBTEXT
-        ctk.CTkLabel(
-            self, text="● ACTIVE" if is_active else "AVAILABLE",
+        self._status_label = ctk.CTkLabel(
+            self,
+            text="● SELECTED" if is_active else "AVAILABLE",
             font=theme.get_font(9, "bold"),
-            text_color=badge_color
-        ).pack(pady=(4, 14))
+            text_color=theme.ACCENT if is_active else theme.SUBTEXT
+        )
+        self._status_label.pack(pady=(4, 14))
 
-        for w in [self] + list(self.winfo_children()):
+        def _on_click(e=None):
+            # Deselect all other cards first
+            for card in CameraCard._all_cards:
+                if card is not self:
+                    card._deselect()
+            self._select()
+            self.command()
+
+        def _on_enter(e=None):
+            if not self._selected:
+                self.configure(border_color=theme.SECONDARY, border_width=1)
+                self._status_label.configure(text="● CLICK TO SELECT", text_color=theme.SECONDARY)
+
+        def _on_leave(e=None):
+            if not self._selected:
+                self.configure(border_color=theme.BORDER, border_width=1)
+                self._status_label.configure(text="AVAILABLE", text_color=theme.SUBTEXT)
+
+        def _walk(widget):
             try:
-                w.bind("<Button-1>", lambda e: self.command())
-                w.bind("<Enter>", lambda e: self.configure(border_color=theme.ACCENT))
-                w.bind("<Leave>", lambda e: self.configure(border_color=theme.BORDER))
+                widget.bind("<Button-1>", _on_click)
+                widget.bind("<Enter>",    _on_enter)
+                widget.bind("<Leave>",    _on_leave)
             except Exception:
                 pass
+            for child in widget.winfo_children():
+                _walk(child)
 
+        _walk(self)
 
+    def _select(self):
+        self._selected = True
+        self.configure(border_color=theme.ACCENT, border_width=2,
+                       fg_color=theme.CARD_HOVER)
+        self._status_label.configure(text="● SELECTED", text_color=theme.ACCENT)
+
+    def _deselect(self):
+        self._selected = False
+        self.configure(border_color=theme.BORDER, border_width=1,
+                       fg_color=theme.CARD)
+        self._status_label.configure(text="AVAILABLE", text_color=theme.SUBTEXT)
+
+    def destroy(self):
+        # Clean up registry on destroy
+        if self in CameraCard._all_cards:
+            CameraCard._all_cards.remove(self)
+        super().destroy()
 # ─────────────────────────────────────────────────────────────────────────────
 # DROP ZONE
 # ─────────────────────────────────────────────────────────────────────────────
@@ -566,8 +615,10 @@ class SectionLabel(ctk.CTkLabel):
         )
 
 # ─────────────────────────────────────────────────────────────────────────────
-# EXERCISE CARD WITH VIDEO PREVIEW
+# EXERCISE CARD WITH VIDEO PREVIEW (Redesigned)
 # ─────────────────────────────────────────────────────────────────────────────
+from PIL import ImageFilter, ImageEnhance
+
 class ExerciseCard(ctk.CTkFrame):
     def __init__(self, parent, name, desc, img_path, video_path, command, **kwargs):
         super().__init__(
@@ -575,86 +626,88 @@ class ExerciseCard(ctk.CTkFrame):
             fg_color=theme.CARD,
             corner_radius=theme.CARD_RADIUS,
             cursor="hand2",
-            border_width=1,
+            border_width=2,
             border_color=theme.BORDER,
             **kwargs
         )
-        self.command    = command
+        self.command     = command
         self._video_path = video_path
+        self._img_path   = img_path
+        self._name       = name
         self._cap        = None
         self._after_id   = None
         self._playing    = False
+        
+        self._current_size = (332, 212) # Fallback start size
+        self._base_img     = None
+        self._thumbnail    = None
 
-        self._build(name, desc, img_path)
+        self._build(name, img_path)
         self._bind_all()
 
-    def _build(self, name, desc, img_path):
-        # Video/image display area
-        self._preview_frame = ctk.CTkFrame(
-            self, fg_color=theme.BACKGROUND,
-            corner_radius=10, width=200, height=150
+    def _build(self, name, img_path):
+        self._preview_label = ctk.CTkLabel(
+            self, text=name.upper(),
+            font=theme.get_font(26, "bold"),
+            text_color="white",
+            compound="center",
+            corner_radius=theme.CARD_RADIUS - 2
         )
-        self._preview_frame.pack(pady=(20, 8), padx=20, fill="x")
-        self._preview_frame.pack_propagate(False)
+        self._preview_label.pack(fill="both", expand=True, padx=4, pady=4)
 
-        self._preview_label = ctk.CTkLabel(self._preview_frame, text="")
-        self._preview_label.pack(fill="both", expand=True)
-
-        # Load static thumbnail first
-        self._thumbnail = None
         if img_path and os.path.exists(img_path):
             try:
-                img = Image.open(img_path).resize((200, 150))
-                self._thumbnail = ctk.CTkImage(
-                    light_image=img, dark_image=img, size=(200, 150)
-                )
-                self._preview_label.configure(image=self._thumbnail, text="")
-            except Exception:
-                self._preview_label.configure(text="🏋️", font=theme.get_font(48))
+                self._base_img = Image.open(img_path)
+            except Exception as e:
+                print(f"Error loading img: {e}")
+                self._preview_label.configure(text=name.upper() + "\n(Image Error)")
         else:
-            self._preview_label.configure(text="🏋️", font=theme.get_font(48))
+            self._preview_label.configure(text=name.upper() + "\n(No Image)")
+            
+        self._update_thumbnail()
 
-        # Play indicator overlay
-        self._play_badge = ctk.CTkLabel(
-            self._preview_frame,
-            text="▶ DEMO",
-            font=theme.get_font(10, "bold"),
-            text_color=theme.ACCENT,
-            fg_color=theme.BACKGROUND,
-            corner_radius=6,
-            padx=6, pady=2
-        )
-        self._play_badge.place(relx=1.0, rely=0.0, anchor="ne", x=-6, y=6)
-
-        # Title and description
-        ctk.CTkLabel(
-            self, text=name.upper(),
-            font=theme.get_font(18, "bold"),
-            text_color=theme.ACCENT
-        ).pack(pady=(6, 2))
-
-        ctk.CTkLabel(
-            self, text=desc,
-            font=theme.get_font(12),
-            text_color=theme.SUBTEXT,
-            wraplength=240
-        ).pack(pady=(0, 16), padx=20)
+    def _update_thumbnail(self):
+        if not self._base_img:
+            return
+            
+        try:
+            # Resize
+            img = self._base_img.resize(self._current_size)
+            
+            # Darken and blur
+            enhancer = ImageEnhance.Brightness(img)
+            img_dark = enhancer.enhance(0.4)
+            img_blur = img_dark.filter(ImageFilter.GaussianBlur(3))
+            
+            self._thumbnail = ctk.CTkImage(
+                light_image=img_blur, dark_image=img_blur, size=self._current_size
+            )
+            # Only update if not playing video
+            if not self._playing:
+                self._preview_label.configure(image=self._thumbnail)
+        except Exception as e:
+            print("Error rendering thumbnail:", e)
 
     def _bind_all(self):
         def on_enter(e):
-            self.configure(border_color=theme.ACCENT, border_width=2,
-                           fg_color=theme.CARD_HOVER)
+            self.configure(border_color=theme.ACCENT)
             self._start_video()
 
         def on_leave(e):
-            self.configure(border_color=theme.BORDER, border_width=1,
-                           fg_color=theme.CARD)
+            self.configure(border_color=theme.BORDER)
             self._stop_video()
 
         def on_click(e):
             self.command()
+            
+        def on_resize(e):
+            w = max(10, e.width)
+            h = max(10, e.height)
+            if (w, h) != self._current_size:
+                self._current_size = (w, h)
+                self._update_thumbnail()
 
-        targets = [self] + list(self.winfo_children()) + [self._preview_frame, self._preview_label]
+        targets = [self, self._preview_label]
         for w in targets:
             try:
                 w.bind("<Enter>", on_enter)
@@ -662,6 +715,8 @@ class ExerciseCard(ctk.CTkFrame):
                 w.bind("<Button-1>", on_click)
             except Exception:
                 pass
+                
+        self._preview_label.bind("<Configure>", on_resize)
 
     def _start_video(self):
         if not self._video_path or not os.path.exists(self._video_path):
@@ -669,8 +724,10 @@ class ExerciseCard(ctk.CTkFrame):
         if self._playing:
             return
         self._playing = True
-        self._cap = cv2.VideoCapture(self._video_path)
-        self._play_badge.configure(text="● LIVE")
+        self._cap = __import__('cv2').VideoCapture(self._video_path)
+        
+        # Optionally hide the text while playing or keep it. We'll keep it but make it slightly smaller
+        self._preview_label.configure(font=theme.get_font(26, "bold"))
         self._next_frame()
 
     def _next_frame(self):
@@ -679,15 +736,24 @@ class ExerciseCard(ctk.CTkFrame):
         success, frame = self._cap.read()
         if not success:
             # Loop back to start
-            self._cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            self._cap.set(__import__('cv2').CAP_PROP_POS_FRAMES, 0)
             success, frame = self._cap.read()
+            
         if success:
+            import cv2
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            img_pil   = Image.fromarray(frame_rgb).resize((200, 150))
-            ctk_img   = ctk.CTkImage(light_image=img_pil, dark_image=img_pil, size=(200, 150))
-            self._preview_label.configure(image=ctk_img, text="")
+            img_pil   = Image.fromarray(frame_rgb).resize(self._current_size)
+            
+            # Slightly darken the video so text is readable
+            enhancer = ImageEnhance.Brightness(img_pil)
+            img_dark = enhancer.enhance(0.5)
+                
+            ctk_img   = ctk.CTkImage(light_image=img_dark, dark_image=img_dark, size=self._current_size)
+            self._preview_label.configure(image=ctk_img)
             self._preview_label.image = ctk_img
-        self._after_id = self.after(42, self._next_frame)  # ~24 fps
+            
+        # Continue loop
+        self._after_id = self.after(33, self._next_frame)  # ~30 fps
 
     def _stop_video(self):
         self._playing = False
@@ -697,16 +763,15 @@ class ExerciseCard(ctk.CTkFrame):
             except Exception:
                 pass
             self._after_id = None
+            
         if self._cap:
             self._cap.release()
             self._cap = None
+            
         # Restore thumbnail
         if self._thumbnail:
-            self._preview_label.configure(image=self._thumbnail, text="")
-        else:
-            self._preview_label.configure(image=None, text="🏋️")
-        self._play_badge.configure(text="▶ DEMO")
-
+            self._preview_label.configure(image=self._thumbnail, font=theme.get_font(26, "bold"))
+        
     def destroy(self):
         self._stop_video()
         super().destroy()
