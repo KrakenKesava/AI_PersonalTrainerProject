@@ -598,25 +598,30 @@ class MainApp(TkinterDnD.Tk):
         if ex in ("pullup", "pullups"):
             from exercises.pullup import PullupAnalyser
             self.analyser  = PullupAnalyser()
-            self.angle_pts = (11, 13, 15)
+            self.angle_pts_left = (11, 13, 15)
+            self.angle_pts_right = (12, 14, 16)
             self.reps.set_thresholds(100, 115)
         elif ex in ("pushup", "pushups"):
             from exercises.pushup import PushupAnalyser
             self.analyser  = PushupAnalyser()
-            self.angle_pts = (11, 13, 15)
+            self.angle_pts_left = (11, 13, 15)
+            self.angle_pts_right = (12, 14, 16)
             self.reps.set_thresholds(110, 140)
         elif ex in ("squat", "squads", "squats"):
             from exercises.squat import SquatAnalyser
             self.analyser  = SquatAnalyser()
-            self.angle_pts = (23, 25, 27)
+            self.angle_pts_left = (23, 25, 27)
+            self.angle_pts_right = (24, 26, 28)
             self.reps.set_thresholds(115, 145)
         elif ex in ("plank", "planks"):
             from exercises.plank import PlankAnalyser
             self.analyser = PlankAnalyser()
-            self.angle_pts = (11, 23, 27) # Shoulder, Hip, Ankle
+            self.angle_pts_left = (11, 23, 27) # Shoulder, Hip, Ankle
+            self.angle_pts_right = (12, 24, 28)
             self.reps.set_thresholds(150, 175)
         else:
-            self.angle_pts = (11, 13, 15)
+            self.angle_pts_left = (11, 13, 15)
+            self.angle_pts_right = (12, 14, 16)
             self.reps.set_thresholds(60, 150)
 
     def _tick_timer(self):
@@ -693,9 +698,35 @@ class MainApp(TkinterDnD.Tk):
         percentage = 0
 
         if lmList:
-            angle = self.detector.findAngle(
-                img, self.angle_pts[0], self.angle_pts[1], self.angle_pts[2], True
+            angle_left = self.detector.findAngle(
+                img, self.angle_pts_left[0], self.angle_pts_left[1], self.angle_pts_left[2], False
             )
+            angle_right = self.detector.findAngle(
+                img, self.angle_pts_right[0], self.angle_pts_right[1], self.angle_pts_right[2], False
+            )
+
+            color_left = (255, 255, 0)
+            color_right = (255, 255, 0)
+            
+            # Check for asymmetry
+            diff = abs(angle_left - angle_right)
+            if diff > 25:
+                # If they are very different, both highlighted red as form is bad
+                color_left = (0, 0, 255)
+                color_right = (0, 0, 255)
+            
+            # Exercise specific static bad form (like plank)
+            ex = self.selected_exercise
+            if ex in ("plank", "planks"):
+                if angle_left < 150 or angle_left > 185: color_left = (0, 0, 255)
+                if angle_right < 150 or angle_right > 185: color_right = (0, 0, 255)
+
+            # Draw the colored edges
+            self.detector.findAngle(img, self.angle_pts_left[0], self.angle_pts_left[1], self.angle_pts_left[2], True, color_left)
+            self.detector.findAngle(img, self.angle_pts_right[0], self.angle_pts_right[1], self.angle_pts_right[2], True, color_right)
+
+            # Use left angle for existing logic to avoid breaking current behaviors
+            angle = angle_left
 
             if self.analyser:
                 self.analyser.update(angle)
