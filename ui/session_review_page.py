@@ -1,4 +1,4 @@
-# ui/session_review_page.py
+                           
 """
 Session Review Page
 Loaded after a workout ends OR when clicking a session from sidebar history.
@@ -28,7 +28,7 @@ class SessionReviewPage(ctk.CTkFrame):
         self._on_back     = on_back
         self._build()
 
-    # ─────────────────────────────────────────────────────────────────────────
+      
     def _build(self):
         s = self._session
         reps      = s.get("reps", [])
@@ -37,7 +37,7 @@ class SessionReviewPage(ctk.CTkFrame):
         avg_rom   = (sum(r.get("rom", 0) for r in reps) / total) if total else 0
         avg_tempo = (sum(r.get("tempo", 0) for r in reps) / total) if total else 0
 
-        # ── Top bar ──────────────────────────────────────────────────────────
+                                                                               
         topbar = ctk.CTkFrame(self, fg_color="transparent")
         topbar.pack(fill="x", padx=24, pady=(20, 8))
 
@@ -53,7 +53,7 @@ class SessionReviewPage(ctk.CTkFrame):
             text_color=theme.TEXT
         ).pack(side="left", padx=20)
 
-        # badges
+                
         badge_frame = ctk.CTkFrame(topbar, fg_color="transparent")
         badge_frame.pack(side="right")
 
@@ -63,7 +63,7 @@ class SessionReviewPage(ctk.CTkFrame):
 
         Divider(self)
 
-        # ── Body: left + right columns ───────────────────────────────────────
+                                                                               
         body = ctk.CTkFrame(self, fg_color="transparent")
         body.pack(fill="both", expand=True, padx=24, pady=0)
 
@@ -74,7 +74,7 @@ class SessionReviewPage(ctk.CTkFrame):
         right.pack(side="right", fill="y")
         right.pack_propagate(False)
 
-        # ── Stat row ─────────────────────────────────────────────────────────
+                                                                               
         stat_row = ctk.CTkFrame(left, fg_color="transparent")
         stat_row.pack(fill="x", pady=(0, 16))
         for i in range(4):
@@ -85,7 +85,7 @@ class SessionReviewPage(ctk.CTkFrame):
         StatCard(stat_row, "Avg ROM",     f"{avg_rom:.1f}°", color=theme.SECONDARY).grid(row=0, column=2, sticky="nsew", padx=4)
         StatCard(stat_row, "Avg tempo",   f"{avg_tempo:.2f}s", color=theme.WARNING).grid(row=0, column=3, sticky="nsew", padx=4)
 
-        # ── Rep breakdown ────────────────────────────────────────────────────
+                                                                               
         SectionLabel(left, "Rep-by-rep breakdown").pack(anchor="w", pady=(0, 6))
 
         rep_scroll = ctk.CTkScrollableFrame(
@@ -98,8 +98,7 @@ class SessionReviewPage(ctk.CTkFrame):
         for rep in reps:
             self._rep_row(rep_scroll, rep)
 
-        # ── RIGHT COLUMN ─────────────────────────────────────────────────────
-        # Gemini card
+                                                                               
         gem_card = ctk.CTkFrame(right, fg_color=theme.CARD, corner_radius=14, border_width=1, border_color=theme.BORDER)
         gem_card.pack(fill="x", pady=(0, 12))
 
@@ -109,8 +108,8 @@ class SessionReviewPage(ctk.CTkFrame):
         ctk.CTkLabel(gem_header, text="✦", font=theme.get_font(18), text_color=theme.SECONDARY).pack(side="left")
         gem_title = ctk.CTkFrame(gem_header, fg_color="transparent")
         gem_title.pack(side="left", padx=8)
-        ctk.CTkLabel(gem_title, text="Gemini analysis", font=theme.get_font(13, "bold"), text_color=theme.TEXT).pack(anchor="w")
-        ctk.CTkLabel(gem_title, text="AI-generated feedback", font=theme.get_font(10), text_color=theme.SUBTEXT).pack(anchor="w")
+        ctk.CTkLabel(gem_title, text="Exercise Analysis", font=theme.get_font(13, "bold"), text_color=theme.TEXT).pack(anchor="w")
+        ctk.CTkLabel(gem_title, text="Session feedback", font=theme.get_font(10), text_color=theme.SUBTEXT).pack(anchor="w")
 
         self._gem_label = ctk.CTkLabel(
             gem_card,
@@ -128,7 +127,7 @@ class SessionReviewPage(ctk.CTkFrame):
             type="ghost", height=32
         ).pack(fill="x", padx=14, pady=(0, 12))
 
-        # Form metrics
+                      
         SectionLabel(right, "Form metrics").pack(anchor="w", pady=(8, 6))
 
         self._pb_rom   = LabeledProgressBar(right, "ROM quality")
@@ -142,10 +141,10 @@ class SessionReviewPage(ctk.CTkFrame):
 
         self._fill_metrics(reps)
 
-        # Kick off Gemini in background
+                                       
         self._start_gemini_thread()
 
-    # ─────────────────────────────────────────────────────────────────────────
+      
     def _badge(self, parent, text, color):
         ctk.CTkLabel(
             parent, text=text,
@@ -174,7 +173,7 @@ class SessionReviewPage(ctk.CTkFrame):
         header = ctk.CTkFrame(row, fg_color="transparent")
         header.pack(fill="x", padx=14, pady=(10, 0))
 
-        # Rep number badge
+                          
         badge = ctk.CTkFrame(header, fg_color=color, corner_radius=20, width=28, height=28)
         badge.pack(side="left")
         badge.pack_propagate(False)
@@ -189,7 +188,7 @@ class SessionReviewPage(ctk.CTkFrame):
         right_meta.pack(side="right")
         ctk.CTkLabel(right_meta, text=f"ROM {rom:.1f}°  ·  {tempo:.2f}s", font=theme.get_font(11), text_color=theme.SUBTEXT).pack()
 
-        # Feedback items
+                        
         if fbs:
             fb_frame = ctk.CTkFrame(row, fg_color="transparent")
             fb_frame.pack(fill="x", padx=14, pady=(4, 10))
@@ -206,28 +205,26 @@ class SessionReviewPage(ctk.CTkFrame):
             return
         total = len(reps)
 
-        # ROM quality: avg percentage of 120° target
+                                                    
         avg_rom = sum(r.get("rom", 0) for r in reps) / total
         self._pb_rom.set_value(min(avg_rom / 120.0, 1.0))
 
-        # Chin clears bar: count reps where no "not reaching" / "pull higher" feedback
+                                                                                      
         chin_ok = sum(1 for r in reps if not any(
             "chin" in f.lower() or "higher" in f.lower()
             for f in r.get("feedback", [])
         ))
         self._pb_chin.set_value(chin_ok / total)
 
-        # Full extension: count reps with "full extension" feedback
+                                                                   
         ext_ok = sum(1 for r in reps if any("extension" in f.lower() for f in r.get("feedback", [])))
         self._pb_ext.set_value(ext_ok / total)
 
-        # Stable tempo: count reps with "stable tempo" or tempo 1.5–3.5s
+                                                                        
         tempo_ok = sum(1 for r in reps if any("stable" in f.lower() for f in r.get("feedback", [])))
         self._pb_tempo.set_value(tempo_ok / total)
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # Gemini
-    # ─────────────────────────────────────────────────────────────────────────
+      
     def _start_gemini_thread(self):
         threading.Thread(target=self._generate_analysis, daemon=True).start()
 
@@ -275,6 +272,6 @@ Recurring feedback: {', '.join(unique_fb)}
         self.after(0, lambda: self._gem_label.configure(text=clean, text_color=theme.TEXT))
 
     def _ask_followup(self):
-        # This will be wired to open the chat page with context pre-loaded
-        # The parent (MainApp) handles navigation, so we raise an event
+                                                                          
+                                                                       
         self.event_generate("<<AskFollowup>>")

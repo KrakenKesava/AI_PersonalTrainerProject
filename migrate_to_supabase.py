@@ -31,8 +31,7 @@ def migrate_sessions():
             with open(filepath, 'r') as f:
                 data = json.load(f)
                 
-            # Insert main session
-            # Note: handle cases where 'total_reps' might not exist or defaults to 0
+                                 
             session_data = {
                 "exercise": data.get("exercise", "unknown"),
                 "session_date": data.get("date", "1970-01-01 00:00:00"),
@@ -48,7 +47,7 @@ def migrate_sessions():
             session_id = session_response.data[0]['id']
             print(f"  [+] Created session {session_id}")
             
-            # Prepare reps array for batch insert
+                                                 
             reps_to_insert = []
             for rep in data.get("reps", []):
                 reps_to_insert.append({

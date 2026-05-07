@@ -1,4 +1,4 @@
-# plank.py
+          
 import time
 from .base_exercise import BaseExercise
 
@@ -14,7 +14,7 @@ class PlankAnalyser(BaseExercise):
         feedback = []
         formCorrect = True
 
-        # For plank, the shoulder-hip-ankle angle should be fairly straight (~160-180 degrees)
+                                                                                              
         if self.min_angle < 150:
             feedback.append("HIPS TOO LOW: Keep your core tight and body straight")
             formCorrect = False

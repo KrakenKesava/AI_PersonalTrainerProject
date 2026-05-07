@@ -1,4 +1,4 @@
-# exercise/pullup.py
+                    
 import time
 from .base_exercise import BaseExercise
 
@@ -14,12 +14,10 @@ class PullupAnalyser(BaseExercise):
         feedback = []
         formCorrect = True
 
-        # =========================
-        # RANGE OF MOTION
-        # =========================
+                                   
         rom = self.max_angle - self.min_angle
 
-        # Specific Feedback for Pullups
+                                       
         if rom < 85:
             feedback.append("Drastic partial range! Focus on full movement.")
             formCorrect = False
@@ -27,10 +25,7 @@ class PullupAnalyser(BaseExercise):
             feedback.append("Incomplete range - work on depth/height")
             formCorrect = False
 
-        # =========================
-        # TOP CHECK (Chin above bar)
-        # =========================
-        # Min angle 55 is good, but let's be more descriptive
+                                   
         if self.min_angle > 65:
             feedback.append("PULL HIGHER: Chin not reaching the bar")
             formCorrect = False
@@ -39,9 +34,7 @@ class PullupAnalyser(BaseExercise):
         else:
             feedback.append("Great pull height - chin cleared!")
 
-        # =========================
-        # BOTTOM CHECK (Dead hang / Lockout)
-        # =========================
+                                   
         if self.max_angle < 140:
             feedback.append("EXTEND FULLY: Arm lockout missing at bottom")
             formCorrect = False
@@ -50,9 +43,7 @@ class PullupAnalyser(BaseExercise):
         else:
             feedback.append("Full extension reached")
 
-        # =========================
-        # TEMPO CHECK
-        # =========================
+                                   
         rep_time = self.calculate_tempo()
         if rep_time < 0.7:
             feedback.append("Too explosive/fast - control the drop")
@@ -62,9 +53,7 @@ class PullupAnalyser(BaseExercise):
         else:
             feedback.append("Stable tempo")
 
-        # =========================
-        # SMOOTHNESS CHECK
-        # =========================
+                                   
         if self.frame_count > 0:
             avg_velocity = self.angle_velocity_sum / self.frame_count
             if avg_velocity > 10:

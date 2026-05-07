@@ -1,11 +1,11 @@
-#PoseModule.py
+              
 import time
 import mediapipe as mp
 import cv2
 import math
 
 class poseDetector():
-    def __init__(self, mode=False, smooth=True, detectionCon=0.9, trackCon=0.9):
+    def __init__(self, mode=False, smooth=True, detectionCon=0.85, trackCon=0.9):
         self.mode = mode
         self.model_complexity = 1
         self.smooth_landmarks = smooth
@@ -20,7 +20,7 @@ class poseDetector():
     def findPose(self,image,draw=True):
         imageRGB = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         self.results = self.pose.process(imageRGB)
-        # print(self.results.pose_landmarks)
+                                            
 
         if draw and self.results.pose_landmarks :
             self.mpDraw.draw_landmarks(image, self.results.pose_landmarks,self.mpPose.POSE_CONNECTIONS)
@@ -48,7 +48,7 @@ class poseDetector():
 
         if angle > 180:
             angle = 360 - angle
-        # print(angle)
+                      
         if draw :
             cv2.line(image,(x1,y1),(x2,y2),color,3)
             cv2.line(image,(x3,y3),(x2,y2),color,3)

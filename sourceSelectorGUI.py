@@ -1,4 +1,4 @@
-# sourceSelectorGUI.py
+                      
 """
 AI Fitness Trainer Pro — Main GUI
 Dark navy theme · CustomTkinter · tkinterdnd2
@@ -38,17 +38,13 @@ from ui.components import (
 )
 from ui.session_review_page import SessionReviewPage
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Supported formats
-# ─────────────────────────────────────────────────────────────────────────────
+                   
 VIDEO_FORMATS = ("mp4", "avi", "mov", "mkv")
 IMAGE_FORMATS = ("jpg", "jpeg", "png", "bmp", "webp")
 
 
 class MainApp(TkinterDnD.Tk):
-    # ─────────────────────────────────────────────────────────────────────────
-    # Init
-    # ─────────────────────────────────────────────────────────────────────────
+          
     def __init__(self):
         super().__init__()
         theme.apply()
@@ -58,7 +54,7 @@ class MainApp(TkinterDnD.Tk):
         self.minsize(1100, 700)
         self.configure(bg=theme.BACKGROUND)
 
-        # ── App state ────────────────────────────────────────────────────────
+                           
         self.selected_exercise = "pullup"
         self.selected_source   = None
         self.selected_name     = ""
@@ -67,21 +63,21 @@ class MainApp(TkinterDnD.Tk):
         self.update_job        = None
         self.pTime             = 0.0
         self.last_feedback     = "Start your workout"
-        self._pending_review   = None   # session dict to show after workout ends
+        self._pending_review   = None                                            
 
-        # ── CV components ────────────────────────────────────────────────────
+                           
         self.detector  = pm.poseDetector()
         self.reps      = rep.RepCounter()
         self.analyser  = None
         self.angle_pts = (11, 13, 15)
 
-        # ── AI ───────────────────────────────────────────────────────────────
+                
         load_dotenv()
         self.api_key = os.getenv("GEMINI_API_KEY")
         self.model   = None
         self._init_gemini()
 
-        # ── Build UI ─────────────────────────────────────────────────────────
+                      
         self._build_layout()
         self.show_exercise_selection()
 
@@ -96,9 +92,7 @@ class MainApp(TkinterDnD.Tk):
         except Exception as e:
             print(f"[Gemini] init failed: {e}")
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # Layout skeleton
-    # ─────────────────────────────────────────────────────────────────────────
+                     
     def _build_layout(self):
         self.main_container = ctk.CTkFrame(self, fg_color=theme.BACKGROUND, corner_radius=0)
         self.main_container.pack(fill="both", expand=True)
@@ -117,7 +111,7 @@ class MainApp(TkinterDnD.Tk):
         self.sidebar.pack(side="left", fill="y")
         self.sidebar.pack_propagate(False)
 
-        # Logo
+              
         logo_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
         logo_frame.pack(fill="x", padx=16, pady=(28, 20))
 
@@ -135,13 +129,13 @@ class MainApp(TkinterDnD.Tk):
 
         ctk.CTkFrame(logo_frame, fg_color=theme.ACCENT, height=2, width=120).pack(anchor="w", pady=(6, 0))
 
-        # Nav buttons
+                     
         SectionLabel(self.sidebar, "Menu").pack(anchor="w", padx=16, pady=(12, 4))
 
         self.btn_workout = SidebarButton(self.sidebar, "🏋  Workout hub",    self.show_exercise_selection, active=True)
         self.btn_ai      = SidebarButton(self.sidebar, "✦  AI assistant",   self.show_chat_interface)
 
-        # Session history
+                         
         SectionLabel(self.sidebar, "Recent sessions").pack(anchor="w", padx=16, pady=(16, 4))
 
         self.history_sidebar = ctk.CTkScrollableFrame(
@@ -153,7 +147,7 @@ class MainApp(TkinterDnD.Tk):
 
         self._refresh_sidebar_history()
 
-        # Footer
+                
         footer = ctk.CTkFrame(self.sidebar, fg_color="transparent")
         footer.pack(side="bottom", fill="x", padx=16, pady=16)
 
@@ -165,6 +159,68 @@ class MainApp(TkinterDnD.Tk):
     def _refresh_sidebar_history(self):
         for w in self.history_sidebar.winfo_children():
             w.destroy()
+
+                                                                                
+        if supabase_client:
+            try:
+                resp = (
+                    supabase_client
+                    .table("workout_sessions")
+                    .select("*, workout_reps(*)")
+                    .order("session_date", desc=True)
+                    .limit(10)
+                    .execute()
+                )
+                sessions = resp.data or []
+
+                if not sessions:
+                    ctk.CTkLabel(
+                        self.history_sidebar, text="No sessions yet",
+                        font=theme.get_font(11), text_color=theme.SUBTEXT
+                    ).pack(pady=8)
+                    return
+
+                for s in sessions:
+                    try:
+                        reps_list = s.get("workout_reps", [])
+                        total = s.get("total_reps", len(reps_list))
+                        good  = sum(1 for r in reps_list if r.get("success"))
+                        rate  = int(good / total * 100) if total else 0
+                        raw_date = s.get("session_date", "")
+                        date_str = raw_date[:10] if raw_date else ""
+
+                                                                                
+                        session_dict = {
+                            "exercise":   s.get("exercise", "?"),
+                            "date":       raw_date,
+                            "total_reps": total,
+                            "reps": [
+                                {
+                                    "rep_num":   r.get("rep_num"),
+                                    "timestamp": r.get("rep_timestamp", ""),
+                                    "rom":       r.get("rom", 0),
+                                    "tempo":     r.get("tempo", 0),
+                                    "success":   r.get("success", False),
+                                    "feedback":  r.get("feedback", []),
+                                }
+                                for r in reps_list
+                            ],
+                        }
+
+                        SessionListItem(
+                            self.history_sidebar,
+                            exercise     = session_dict["exercise"],
+                            date_str     = date_str,
+                            total_reps   = total,
+                            success_rate = rate,
+                            command      = lambda d=session_dict: self._show_review_from_sidebar(d)
+                        ).pack(fill="x", pady=3)
+                    except Exception:
+                        continue
+                return
+            except Exception as e:
+                print(f"[Supabase] sidebar fetch error: {e}")
+                                                
 
         sessions_dir = "sessions"
         if not os.path.exists(sessions_dir):
@@ -198,11 +254,11 @@ class MainApp(TkinterDnD.Tk):
 
                 SessionListItem(
                     self.history_sidebar,
-                    exercise    = data.get("exercise", "?"),
-                    date_str    = date_str,
-                    total_reps  = total,
-                    success_rate= rate,
-                    command     = lambda d=data: self._show_review_from_sidebar(d)
+                    exercise     = data.get("exercise", "?"),
+                    date_str     = date_str,
+                    total_reps   = total,
+                    success_rate = rate,
+                    command      = lambda d=data: self._show_review_from_sidebar(d)
                 ).pack(fill="x", pady=3)
             except Exception:
                 continue
@@ -211,9 +267,7 @@ class MainApp(TkinterDnD.Tk):
         self._nav_set_active("ai")
         self._show_review(session_data)
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # Helpers
-    # ─────────────────────────────────────────────────────────────────────────
+             
     def _clear_content(self):
         for w in self.content_area.winfo_children():
             w.destroy()
@@ -254,9 +308,7 @@ class MainApp(TkinterDnD.Tk):
             self.selected_source.release()
         self.quit()
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # SCREEN 1 — Exercise Selection
-    # ─────────────────────────────────────────────────────────────────────────
+                                  
     def show_exercise_selection(self):
         self._stop_workout_quietly()
         self._clear_content()
@@ -264,7 +316,7 @@ class MainApp(TkinterDnD.Tk):
 
         self._topbar("Select your exercise", badge_text="Step 1 of 3", badge_color=theme.SECONDARY)
 
-        # Step breadcrumb
+                         
         self._step_indicator(1)
 
         grid = ctk.CTkFrame(self.content_area, fg_color="transparent")
@@ -286,7 +338,7 @@ class MainApp(TkinterDnD.Tk):
                 "exerciseVideos/Pullups/Pullup_Side_Correct.mp4"
             ),
             (
-                "Squads",
+                "Squats",
                 "Lower your hips from a standing position...",
                 "exerciseVideos/Squads/Squads.png",
                 "exerciseVideos/Squads/Squads_Side_Correct.mp4"
@@ -308,23 +360,21 @@ class MainApp(TkinterDnD.Tk):
             )
             card.grid(row=r, column=c, sticky="nsew", padx=10, pady=10)
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # SCREEN 2 — Source Selection
-    # ─────────────────────────────────────────────────────────────────────────
+                                
     def show_source_selection(self, exercise: str):
         self.selected_exercise = exercise
         self._clear_content()
         self._nav_set_active("workout")
 
         self._topbar(
-            f"Input source — {exercise.capitalize()}",
+            "Input source",
             badge_text="Step 2 of 3",
             badge_color=theme.SECONDARY,
             back_cmd=self.show_exercise_selection
         )
         self._step_indicator(2)
 
-        # Tab bar
+                 
         tab_frame = ctk.CTkFrame(self.content_area, fg_color="transparent")
         tab_frame.pack(fill="x", padx=28, pady=(4, 0))
 
@@ -351,7 +401,7 @@ class MainApp(TkinterDnD.Tk):
         )
         self._tab_vid_btn.pack(side="left", padx=4, pady=4)
 
-        # Panel container
+                         
         self._src_panel_container = ctk.CTkFrame(self.content_area, fg_color="transparent")
         self._src_panel_container.pack(fill="both", expand=True, padx=28, pady=12)
 
@@ -360,7 +410,7 @@ class MainApp(TkinterDnD.Tk):
 
         self._switch_src_tab("camera")
 
-        # Footer
+                
         src_footer = ctk.CTkFrame(self.content_area, fg_color="transparent")
         src_footer.pack(fill="x", padx=28, pady=(0, 20))
 
@@ -371,7 +421,7 @@ class MainApp(TkinterDnD.Tk):
     def _build_camera_panel(self, parent):
         panel = ctk.CTkFrame(parent, fg_color="transparent")
 
-        # Camera cards row
+                          
         cards_row = ctk.CTkFrame(panel, fg_color="transparent")
         cards_row.pack(fill="x", pady=(0, 12))
 
@@ -389,7 +439,7 @@ class MainApp(TkinterDnD.Tk):
                     command=lambda i=idx, n=cam_name: self._select_camera(i, n)
                 ).pack(side="left", padx=6, ipadx=8, ipady=4)
 
-        # Settings row
+                      
         settings = ctk.CTkFrame(panel, fg_color=theme.CARD, corner_radius=12, border_width=1, border_color=theme.BORDER)
         settings.pack(fill="x", pady=4)
 
@@ -410,7 +460,7 @@ class MainApp(TkinterDnD.Tk):
                               button_color=theme.BORDER, button_hover_color=theme.ACCENT,
                               font=theme.get_font(12)).pack(side="right")
 
-        # Start button
+                      
         StyledButton(
             panel, text="Start workout →", type="primary", height=44,
             command=lambda: self._launch_from_camera()
@@ -488,9 +538,7 @@ class MainApp(TkinterDnD.Tk):
             else:
                 messagebox.showerror("File error", "Could not open video file.")
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # SCREEN 3 — Live Workout
-    # ─────────────────────────────────────────────────────────────────────────
+                            
     def start_workout(self, source, name: str):
         self.selected_source = source
         self.selected_name   = name
@@ -500,7 +548,7 @@ class MainApp(TkinterDnD.Tk):
         self._nav_set_active("workout")
         self._init_analyser()
 
-        # ── Header ───────────────────────────────────────────────────────────
+                           
         header = ctk.CTkFrame(self.content_area, fg_color="transparent")
         header.pack(fill="x", padx=24, pady=(16, 8))
 
@@ -512,7 +560,7 @@ class MainApp(TkinterDnD.Tk):
 
         ctk.CTkLabel(
             header,
-            text=f"Live — {self.selected_exercise.capitalize()}",
+            text="Live",
             font=theme.get_font(20, "bold"),
             text_color=theme.TEXT
         ).pack(side="left", padx=16)
@@ -528,11 +576,11 @@ class MainApp(TkinterDnD.Tk):
 
         Divider(self.content_area)
 
-        # ── Body: video feed + stats ──────────────────────────────────────────
+                                  
         body = ctk.CTkFrame(self.content_area, fg_color="transparent")
         body.pack(fill="both", expand=True, padx=24, pady=(0, 16))
 
-        # Video column
+                      
         vid_col = ctk.CTkFrame(body, fg_color=theme.BACKGROUND,
                                border_width=2, border_color=theme.ACCENT, corner_radius=12)
         vid_col.pack(side="left", fill="both", expand=True, padx=(0, 16))
@@ -540,7 +588,7 @@ class MainApp(TkinterDnD.Tk):
         self.video_label = ctk.CTkLabel(vid_col, text="Initialising camera...")
         self.video_label.pack(fill="both", expand=True, padx=2, pady=2)
 
-        # Stats column
+                      
         stats_col = ctk.CTkFrame(body, width=240, fg_color=theme.SIDEBAR,
                                  corner_radius=14, border_width=1, border_color=theme.BORDER)
         stats_col.pack(side="right", fill="y")
@@ -548,13 +596,13 @@ class MainApp(TkinterDnD.Tk):
 
         SectionLabel(stats_col, "Telemetry").pack(anchor="w", padx=16, pady=(16, 8))
 
-        # Animated rep counter
+                              
         self._rep_counter_widget = AnimatedRepCounter(stats_col)
         self._rep_counter_widget.pack(pady=(0, 8))
 
         Divider(stats_col)
 
-        # Metric cards
+                      
         mc_frame = ctk.CTkFrame(stats_col, fg_color="transparent")
         mc_frame.pack(fill="x", padx=12, pady=4)
         mc_frame.grid_columnconfigure((0, 1), weight=1, pad=6)
@@ -566,14 +614,14 @@ class MainApp(TkinterDnD.Tk):
 
         Divider(stats_col)
 
-        # Feedback bar
+                      
         SectionLabel(stats_col, "Form feedback").pack(anchor="w", padx=16, pady=(4, 4))
         self._feedback_bar = FeedbackBar(stats_col)
         self._feedback_bar.pack(fill="x", padx=12, pady=(0, 8))
 
         Divider(stats_col)
 
-        # Rep history log
+                         
         SectionLabel(stats_col, "Session log").pack(anchor="w", padx=16, pady=(4, 4))
         self._history_scroll = ctk.CTkScrollableFrame(
             stats_col, fg_color="transparent",
@@ -582,7 +630,7 @@ class MainApp(TkinterDnD.Tk):
         )
         self._history_scroll.pack(fill="both", expand=True, padx=8, pady=(0, 8))
 
-        # Footer
+                
         StyledButton(
             self.content_area, text="End session & review →",
             command=self.stop_workout_and_review,
@@ -616,7 +664,7 @@ class MainApp(TkinterDnD.Tk):
         elif ex in ("plank", "planks"):
             from exercises.plank import PlankAnalyser
             self.analyser = PlankAnalyser()
-            self.angle_pts_left = (11, 23, 27) # Shoulder, Hip, Ankle
+            self.angle_pts_left = (11, 23, 27)                       
             self.angle_pts_right = (12, 24, 28)
             self.reps.set_thresholds(150, 175)
         else:
@@ -708,24 +756,24 @@ class MainApp(TkinterDnD.Tk):
             color_left = (255, 255, 0)
             color_right = (255, 255, 0)
             
-            # Check for asymmetry
+                                 
             diff = abs(angle_left - angle_right)
             if diff > 25:
-                # If they are very different, both highlighted red as form is bad
+                                                                                 
                 color_left = (0, 0, 255)
                 color_right = (0, 0, 255)
             
-            # Exercise specific static bad form (like plank)
+                                                            
             ex = self.selected_exercise
             if ex in ("plank", "planks"):
                 if angle_left < 150 or angle_left > 185: color_left = (0, 0, 255)
                 if angle_right < 150 or angle_right > 185: color_right = (0, 0, 255)
 
-            # Draw the colored edges
+                                    
             self.detector.findAngle(img, self.angle_pts_left[0], self.angle_pts_left[1], self.angle_pts_left[2], True, color_left)
             self.detector.findAngle(img, self.angle_pts_right[0], self.angle_pts_right[1], self.angle_pts_right[2], True, color_right)
 
-            # Use left angle for existing logic to avoid breaking current behaviors
+                                                                                   
             angle = angle_left
 
             if self.analyser:
@@ -734,7 +782,7 @@ class MainApp(TkinterDnD.Tk):
             percentage = float(np.clip(np.interp(angle, (50, 160), (100, 0)), 0, 100))
             reps_count, rep_done = self.reps.update(angle)
 
-            # Update animated rep counter
+                                         
             self._rep_counter_widget.set_reps(reps_count)
 
             if rep_done and self.analyser:
@@ -760,7 +808,7 @@ class MainApp(TkinterDnD.Tk):
                 live_fb = self.analyser.get_live_feedback(angle)
                 self._feedback_bar.set_text(live_fb, "info")
 
-        # CV overlays
+                     
         cv2.putText(img, f"Reps: {int(reps_count)}",
                     (margin_x, margin_y + int(60 * scale)),
                     cv2.FONT_HERSHEY_SIMPLEX, 1.2 * scale, (255, 0, 0), int(3 * scale))
@@ -770,7 +818,7 @@ class MainApp(TkinterDnD.Tk):
                     (margin_x, margin_y + int(110 * scale)),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.8 * scale, (255, 255, 0), int(2 * scale))
 
-        # Progress bar
+                      
         bx, by    = margin_x, margin_y + int(160 * scale)
         bar_h     = int(300 * scale)
         bar_w     = int(40 * scale)
@@ -780,7 +828,7 @@ class MainApp(TkinterDnD.Tk):
         cv2.putText(img, f"{int(percentage)}%", (bx, by - int(15 * scale)),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.8 * scale, (255, 255, 255), thickness)
 
-        # Feedback overlay
+                          
         feedback_lines = self.last_feedback.split("|")
         y_off = img_h - int(120 * scale)
         for i, line in enumerate(feedback_lines):
@@ -795,7 +843,7 @@ class MainApp(TkinterDnD.Tk):
     def _add_history_item(self, rep_data: dict):
         item = RepHistoryItem(self._history_scroll, rep_data)
         item.pack(fill="x", pady=3)
-        # Auto-scroll to bottom
+                               
         self._history_scroll._parent_canvas.yview_moveto(1.0)
 
     def display_frame(self, frame):
@@ -809,9 +857,7 @@ class MainApp(TkinterDnD.Tk):
         self.video_label.configure(image=img_tk, text="")
         self.video_label.image = img_tk
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # SCREEN 4 — Session Review
-    # ─────────────────────────────────────────────────────────────────────────
+                              
     def _show_review(self, session: dict):
         self._clear_content()
         self._nav_set_active("ai")
@@ -825,7 +871,7 @@ class MainApp(TkinterDnD.Tk):
         )
         page.pack(fill="both", expand=True)
 
-        # Wire follow-up button → opens chat with context
+                                                         
         page.bind("<<AskFollowup>>", lambda e: self._open_chat_with_context(session))
 
     def _build_session_dict(self) -> dict:
@@ -836,19 +882,17 @@ class MainApp(TkinterDnD.Tk):
             "reps":       self.session_data,
         }
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # Save session
-    # ─────────────────────────────────────────────────────────────────────────
+                  
     def save_session(self):
         if not self.session_data:
             return
         
         session_dict = self._build_session_dict()
         
-        # 1. Save to Supabase
+                             
         if supabase_client:
             try:
-                # Insert session
+                                
                 session_payload = {
                     "exercise": session_dict["exercise"],
                     "session_date": session_dict["date"],
@@ -876,7 +920,7 @@ class MainApp(TkinterDnD.Tk):
             except Exception as e:
                 print(f"[Supabase] save error: {e}")
 
-        # 2. Local Fallback save
+                                
         os.makedirs("sessions", exist_ok=True)
         ts       = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"sessions/session_{self.selected_exercise}_{ts}.json"
@@ -886,9 +930,7 @@ class MainApp(TkinterDnD.Tk):
         except Exception as e:
             pass
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # AI ASSISTANT (chat screen)
-    # ─────────────────────────────────────────────────────────────────────────
+                                
     def show_chat_interface(self, prefill: str = ""):
         self._stop_workout_quietly()
         self._clear_content()
@@ -910,7 +952,7 @@ class MainApp(TkinterDnD.Tk):
         )
         self.chat_history.pack(fill="both", expand=True, padx=16, pady=16)
 
-        # Input row
+                   
         input_row = ctk.CTkFrame(chat_outer, fg_color=theme.BACKGROUND, corner_radius=10)
         input_row.pack(fill="x", padx=12, pady=(0, 12))
 
@@ -954,7 +996,7 @@ class MainApp(TkinterDnD.Tk):
             return "No previous session data found. (Supabase not connected)"
             
         try:
-            # Fetch last 30 sessions from Supabase to provide long-term historical context
+                                                                                          
             resp = supabase_client.table("workout_sessions").select("*, workout_reps(*)").order("created_at", desc=True).limit(30).execute()
             sessions = resp.data
             
@@ -973,7 +1015,7 @@ class MainApp(TkinterDnD.Tk):
                 for r in failed:
                     all_fb.extend(r.get("feedback", []))
                 
-                # Make list unique
+                                  
                 from collections import OrderedDict
                 unique_fb = list(OrderedDict.fromkeys(all_fb))
                 
@@ -1063,9 +1105,7 @@ class MainApp(TkinterDnD.Tk):
         self.chat_history._parent_canvas.yview_moveto(1.0)
         return frame
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # Step indicator breadcrumb
-    # ─────────────────────────────────────────────────────────────────────────
+                           
     def _step_indicator(self, current: int):
         steps = ["Select exercise", "Input source", "Live workout"]
         bar = ctk.CTkFrame(self.content_area, fg_color="transparent")
@@ -1085,7 +1125,6 @@ class MainApp(TkinterDnD.Tk):
                 ctk.CTkLabel(bar, text="  ›  ", font=theme.get_font(11), text_color=theme.BORDER).pack(side="left")
 
 
-# ─────────────────────────────────────────────────────────────────────────────
 def launch_gui():
     theme.apply()
     app = MainApp()

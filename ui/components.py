@@ -1,4 +1,4 @@
-# ui/components.py
+                  
 import os
 import math
 import customtkinter as ctk
@@ -6,9 +6,6 @@ from PIL import Image
 from ui import theme
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# SIDEBAR BUTTON
-# ─────────────────────────────────────────────────────────────────────────────
 class SidebarButton(ctk.CTkButton):
     def __init__(self, parent, text, command, active=False, **kwargs):
         super().__init__(
@@ -38,9 +35,6 @@ class SidebarButton(ctk.CTkButton):
         )
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# SIDEBAR SESSION ITEM
-# ─────────────────────────────────────────────────────────────────────────────
 class SessionListItem(ctk.CTkFrame):
     def __init__(self, parent, exercise, date_str, total_reps, success_rate, command, **kwargs):
         super().__init__(
@@ -94,9 +88,6 @@ class SessionListItem(ctk.CTkFrame):
                 pass
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# EXERCISE CARD
-# ─────────────────────────────────────────────────────────────────────────────
 class ExerciseCard(ctk.CTkFrame):
     def __init__(self, parent, name, desc, img_path, command, **kwargs):
         super().__init__(
@@ -163,9 +154,6 @@ class ExerciseCard(ctk.CTkFrame):
                     pass
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# STAT CARD  (metric display)
-# ─────────────────────────────────────────────────────────────────────────────
 class StatCard(ctk.CTkFrame):
     def __init__(self, parent, label, value="–", unit="", color=None, **kwargs):
         super().__init__(
@@ -204,9 +192,6 @@ class StatCard(ctk.CTkFrame):
         self._val_label.configure(text=str(value), text_color=color or self._color)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# ANIMATED REP COUNTER
-# ─────────────────────────────────────────────────────────────────────────────
 class AnimatedRepCounter(ctk.CTkFrame):
     """Large animated rep counter with a circular progress ring drawn on canvas."""
 
@@ -253,13 +238,13 @@ class AnimatedRepCounter(ctk.CTkFrame):
         c.delete("all")
         pad = self.RING_WIDTH + 4
         size = self.RING_SIZE
-        # Background ring
+                         
         c.create_arc(pad, pad, size - pad, size - pad,
                      start=90, extent=360,
                      style="arc", outline=theme.BORDER,
                      width=self.RING_WIDTH)
         if pct > 0:
-            extent = -pct * 3.6  # 0-100 → 0-360
+            extent = -pct * 3.6                 
             c.create_arc(pad, pad, size - pad, size - pad,
                          start=90, extent=extent,
                          style="arc", outline=theme.ACCENT,
@@ -278,16 +263,13 @@ class AnimatedRepCounter(ctk.CTkFrame):
                 self._rep_text.after_cancel(self._anim_after)
             except Exception:
                 pass
-        # Quick flash effect
+                            
         self._rep_text.configure(text_color=theme.WARNING)
         self._anim_after = self._rep_text.after(
             180, lambda: self._rep_text.configure(text_color=theme.ACCENT)
         )
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# FEEDBACK BAR
-# ─────────────────────────────────────────────────────────────────────────────
 class FeedbackBar(ctk.CTkFrame):
     def __init__(self, parent, **kwargs):
         super().__init__(
@@ -323,9 +305,6 @@ class FeedbackBar(ctk.CTkFrame):
         self._label.configure(text=text, text_color=color_map.get(level, theme.WARNING))
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# PROGRESS BAR ROW
-# ─────────────────────────────────────────────────────────────────────────────
 class LabeledProgressBar(ctk.CTkFrame):
     def __init__(self, parent, label: str, value: float = 0.0, **kwargs):
         super().__init__(parent, fg_color="transparent", **kwargs)
@@ -356,11 +335,8 @@ class LabeledProgressBar(ctk.CTkFrame):
         self._pct_label.configure(text=f"{pct}%")
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# CAMERA CARD (source selector)
-# ─────────────────────────────────────────────────────────────────────────────
 class CameraCard(ctk.CTkFrame):
-    # Class-level registry so cards can deselect each other
+                                                           
     _all_cards = []
 
     def __init__(self, parent, index: int, name: str, is_active: bool, command, **kwargs):
@@ -377,7 +353,7 @@ class CameraCard(ctk.CTkFrame):
         self._selected  = is_active
         self._index     = index
 
-        # Register this card
+                            
         CameraCard._all_cards.append(self)
 
         self._cam_label = ctk.CTkLabel(
@@ -403,7 +379,7 @@ class CameraCard(ctk.CTkFrame):
         self._status_label.pack(pady=(4, 14))
 
         def _on_click(e=None):
-            # Deselect all other cards first
+                                            
             for card in CameraCard._all_cards:
                 if card is not self:
                     card._deselect()
@@ -445,13 +421,12 @@ class CameraCard(ctk.CTkFrame):
         self._status_label.configure(text="AVAILABLE", text_color=theme.SUBTEXT)
 
     def destroy(self):
-        # Clean up registry on destroy
+                                      
         if self in CameraCard._all_cards:
             CameraCard._all_cards.remove(self)
         super().destroy()
-# ─────────────────────────────────────────────────────────────────────────────
-# DROP ZONE
-# ─────────────────────────────────────────────────────────────────────────────
+                                                                               
+           
 class DropZone(ctk.CTkFrame):
     def __init__(self, parent, on_file_selected, **kwargs):
         super().__init__(
@@ -488,9 +463,9 @@ class DropZone(ctk.CTkFrame):
         )
         self._browse_btn.pack(pady=(0, 20))
 
-        # Register DnD if available
+                                   
         try:
-            self.drop_target_register("DND_Files")  # tkinterdnd2
+            self.drop_target_register("DND_Files")               
             self.dnd_bind("<<Drop>>", self._on_drop)
         except Exception:
             pass
@@ -530,9 +505,6 @@ class DropZone(ctk.CTkFrame):
         self._browse_btn.configure(text="Browse files")
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# HISTORY REP ITEM
-# ─────────────────────────────────────────────────────────────────────────────
 class RepHistoryItem(ctk.CTkFrame):
     def __init__(self, parent, rep_data: dict, **kwargs):
         n = rep_data.get("rep_num", "?")
@@ -582,9 +554,6 @@ class RepHistoryItem(ctk.CTkFrame):
         ).pack()
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# STYLED BUTTON
-# ─────────────────────────────────────────────────────────────────────────────
 class StyledButton(ctk.CTkButton):
     def __init__(self, parent, text, command, type="primary", **kwargs):
         styles = {
@@ -602,9 +571,6 @@ class StyledButton(ctk.CTkButton):
         )
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# SECTION LABEL
-# ─────────────────────────────────────────────────────────────────────────────
 class SectionLabel(ctk.CTkLabel):
     def __init__(self, parent, text, **kwargs):
         super().__init__(
@@ -614,9 +580,7 @@ class SectionLabel(ctk.CTkLabel):
             **kwargs
         )
 
-# ─────────────────────────────────────────────────────────────────────────────
-# EXERCISE CARD WITH VIDEO PREVIEW (Redesigned)
-# ─────────────────────────────────────────────────────────────────────────────
+                                                                               
 from PIL import ImageFilter, ImageEnhance
 
 class ExerciseCard(ctk.CTkFrame):
@@ -638,7 +602,7 @@ class ExerciseCard(ctk.CTkFrame):
         self._after_id   = None
         self._playing    = False
         
-        self._current_size = (332, 212) # Fallback start size
+        self._current_size = (332, 212)                      
         self._base_img     = None
         self._thumbnail    = None
 
@@ -671,10 +635,10 @@ class ExerciseCard(ctk.CTkFrame):
             return
             
         try:
-            # Resize
+                    
             img = self._base_img.resize(self._current_size)
             
-            # Darken and blur
+                             
             enhancer = ImageEnhance.Brightness(img)
             img_dark = enhancer.enhance(0.4)
             img_blur = img_dark.filter(ImageFilter.GaussianBlur(3))
@@ -682,7 +646,7 @@ class ExerciseCard(ctk.CTkFrame):
             self._thumbnail = ctk.CTkImage(
                 light_image=img_blur, dark_image=img_blur, size=self._current_size
             )
-            # Only update if not playing video
+                                              
             if not self._playing:
                 self._preview_label.configure(image=self._thumbnail)
         except Exception as e:
@@ -726,7 +690,7 @@ class ExerciseCard(ctk.CTkFrame):
         self._playing = True
         self._cap = __import__('cv2').VideoCapture(self._video_path)
         
-        # Optionally hide the text while playing or keep it. We'll keep it but make it slightly smaller
+                                                                                                       
         self._preview_label.configure(font=theme.get_font(26, "bold"))
         self._next_frame()
 
@@ -735,7 +699,7 @@ class ExerciseCard(ctk.CTkFrame):
             return
         success, frame = self._cap.read()
         if not success:
-            # Loop back to start
+                                
             self._cap.set(__import__('cv2').CAP_PROP_POS_FRAMES, 0)
             success, frame = self._cap.read()
             
@@ -744,7 +708,7 @@ class ExerciseCard(ctk.CTkFrame):
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             img_pil   = Image.fromarray(frame_rgb).resize(self._current_size)
             
-            # Slightly darken the video so text is readable
+                                                           
             enhancer = ImageEnhance.Brightness(img_pil)
             img_dark = enhancer.enhance(0.5)
                 
@@ -752,8 +716,8 @@ class ExerciseCard(ctk.CTkFrame):
             self._preview_label.configure(image=ctk_img)
             self._preview_label.image = ctk_img
             
-        # Continue loop
-        self._after_id = self.after(33, self._next_frame)  # ~30 fps
+                       
+        self._after_id = self.after(33, self._next_frame)           
 
     def _stop_video(self):
         self._playing = False
@@ -768,7 +732,7 @@ class ExerciseCard(ctk.CTkFrame):
             self._cap.release()
             self._cap = None
             
-        # Restore thumbnail
+                           
         if self._thumbnail:
             self._preview_label.configure(image=self._thumbnail, font=theme.get_font(26, "bold"))
         
@@ -777,9 +741,6 @@ class ExerciseCard(ctk.CTkFrame):
         super().destroy()
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# DIVIDER
-# ─────────────────────────────────────────────────────────────────────────────
 class Divider(ctk.CTkFrame):
     def __init__(self, parent, **kwargs):
         super().__init__(parent, fg_color=theme.BORDER, height=1, **kwargs)

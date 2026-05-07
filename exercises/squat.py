@@ -1,4 +1,4 @@
-# squat.py
+          
 import time
 from .base_exercise import BaseExercise
 
@@ -14,9 +14,7 @@ class SquatAnalyser(BaseExercise):
         feedback = []
         formCorrect = True
 
-        # =========================
-        # RANGE OF MOTION (ROM)
-        # =========================
+                                   
         rom = self.max_angle - self.min_angle
         if rom < 70:
             feedback.append("Drastic partial range! Squat deeper for effective results.")
@@ -25,9 +23,7 @@ class SquatAnalyser(BaseExercise):
             feedback.append("Incomplete range - focus on hip-to-knee depth")
             formCorrect = False
 
-        # =========================
-        # TOP CHECK (Lockout)
-        # =========================
+                                   
         if self.max_angle < 155:
             feedback.append("LOCKOUT ERROR: Stand up fully at the top")
             formCorrect = False
@@ -36,9 +32,7 @@ class SquatAnalyser(BaseExercise):
         else:
             feedback.append("Good full lockout reached")
 
-        # =========================
-        # BOTTOM CHECK (Parallel)
-        # =========================
+                                   
         if self.min_angle > 90:
             feedback.append("DEPTH ERROR: Hips must reach at least knee level")
             formCorrect = False
@@ -47,9 +41,7 @@ class SquatAnalyser(BaseExercise):
         else:
             feedback.append("Excellent depth - below parallel!")
 
-        # =========================
-        # TEMPO CHECK
-        # =========================
+                                   
         rep_time = self.calculate_tempo()
         if rep_time < 1.1:
             feedback.append("Too fast - control the descent to avoid injury")
@@ -62,7 +54,7 @@ class SquatAnalyser(BaseExercise):
         if formCorrect:
             feedback.append("PRO FORM: Perfect Squat!")
 
-        # Capture results before reset
+                                      
         result = {
             "formCorrect": formCorrect,
             "feedback": feedback,

@@ -1,4 +1,4 @@
-# pushup.py
+           
 import time
 from .base_exercise import BaseExercise
 
@@ -14,9 +14,7 @@ class PushupAnalyser(BaseExercise):
         feedback = []
         formCorrect = True
 
-        # =========================
-        # RANGE OF MOTION (ROM)
-        # =========================
+                                   
         rom = self.max_angle - self.min_angle
         if rom < 60:
             feedback.append("Drastic partial range! Move deeper between top and bottom.")
@@ -25,9 +23,7 @@ class PushupAnalyser(BaseExercise):
             feedback.append("Increase range of motion for better chest engagement")
             formCorrect = False
 
-        # =========================
-        # TOP CHECK (Lockout)
-        # =========================
+                                   
         if self.max_angle < 150:
             feedback.append("LOCKOUT ERROR: Fully straighten arms at the top")
             formCorrect = False
@@ -36,9 +32,7 @@ class PushupAnalyser(BaseExercise):
         else:
             feedback.append("Good full lockout reached")
 
-        # =========================
-        # BOTTOM CHECK (Depth)
-        # =========================
+                                   
         if self.min_angle > 95:
             feedback.append("DEPTH ERROR: Go lower, chest closer to floor")
             formCorrect = False
@@ -47,9 +41,7 @@ class PushupAnalyser(BaseExercise):
         else:
             feedback.append("Excellent depth reached")
 
-        # =========================
-        # TEMPO CHECK
-        # =========================
+                                   
         rep_time = self.calculate_tempo()
         if rep_time < 0.9:
             feedback.append("Too fast - control the descent and push")
@@ -62,7 +54,7 @@ class PushupAnalyser(BaseExercise):
         if formCorrect:
             feedback.append("PRO FORM: Perfect Push-up!")
 
-        # Capture results before reset
+                                      
         result = {
             "formCorrect": formCorrect,
             "feedback": feedback,
